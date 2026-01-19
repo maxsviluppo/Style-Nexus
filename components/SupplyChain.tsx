@@ -24,6 +24,12 @@ const SupplyChain: React.FC<SupplyChainProps> = ({ products, setProducts, invoic
   const [currentInvoice, setCurrentInvoice] = useState<Partial<Invoice>>({
     items: [], status: 'DRAFT', date: new Date().toISOString().split('T')[0]
   });
+
+  // Supplier UI State
+  const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
+  const [newSupplier, setNewSupplier] = useState<Partial<Supplier>>({
+      name: '', vat: '', email: '', phone: '', address: ''
+  });
   
   // AI Parsing State
   const [isParsingInvoice, setIsParsingInvoice] = useState(false);
@@ -183,6 +189,24 @@ const SupplyChain: React.FC<SupplyChainProps> = ({ products, setProducts, invoic
     alert("Magazzino aggiornato con successo!");
   };
 
+  const handleSaveSupplier = () => {
+    if (!newSupplier.name || !newSupplier.vat) {
+      alert("Nome e Partita IVA sono obbligatori.");
+      return;
+    }
+    const supplier: Supplier = {
+      id: Date.now().toString(),
+      name: newSupplier.name,
+      vat: newSupplier.vat,
+      email: newSupplier.email || '',
+      phone: newSupplier.phone || '',
+      address: newSupplier.address || ''
+    };
+    setSuppliers([...suppliers, supplier]);
+    setIsSupplierModalOpen(false);
+    setNewSupplier({ name: '', vat: '', email: '', phone: '', address: '' });
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex gap-4 border-b border-slate-200">
@@ -218,13 +242,20 @@ const SupplyChain: React.FC<SupplyChainProps> = ({ products, setProducts, invoic
       )}
 
       {activeTab === 'SUPPLIERS' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {suppliers.map(s => (
-                <div key={s.id} className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 relative group hover:shadow-md transition">
-                    <div className="flex items-center gap-4 mb-4"><div className="w-12 h-12 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600"><Truck /></div><div><h3 className="font-bold text-slate-800">{s.name}</h3><div className="text-xs text-slate-400">P.IVA: {s.vat}</div></div></div>
-                    <div className="text-sm text-slate-600 space-y-2"><div className="flex gap-2"><span>📧</span> {s.email}</div><div className="flex gap-2"><span>📞</span> {s.phone}</div><div className="flex gap-2"><span>📍</span> {s.address}</div></div>
-                </div>
-            ))}
+        <div className="space-y-6">
+            <div className="flex justify-between items-center">
+                <div><h2 className="text-xl font-bold text-slate-800">Rubrica Fornitori</h2><p className="text-slate-500">Gestisci i tuoi partner commerciali.</p></div>
+                <button onClick={() => setIsSupplierModalOpen(true)} className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 flex items-center gap-2"><Plus size={20} /> Nuovo Fornitore</button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {suppliers.map(s => (
+                    <div key={s.id} className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 relative group hover:shadow-md transition">
+                        <div className="flex items-center gap-4 mb-4"><div className="w-12 h-12 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600"><Truck /></div><div><h3 className="font-bold text-slate-800">{s.name}</h3><div className="text-xs text-slate-400">P.IVA: {s.vat}</div></div></div>
+                        <div className="text-sm text-slate-600 space-y-2"><div className="flex gap-2"><span>📧</span> {s.email}</div><div className="flex gap-2"><span>📞</span> {s.phone}</div><div className="flex gap-2"><span>📍</span> {s.address}</div></div>
+                    </div>
+                ))}
+            </div>
         </div>
       )}
 
@@ -311,6 +342,26 @@ const SupplyChain: React.FC<SupplyChainProps> = ({ products, setProducts, invoic
                 </div>
              </div>
           </div>
+      )}
+
+      {isSupplierModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 animate-in fade-in zoom-in duration-200">
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-xl font-bold text-slate-800">Nuovo Fornitore</h3>
+                    <button onClick={() => setIsSupplierModalOpen(false)}><X className="text-slate-400"/></button>
+                </div>
+                <div className="space-y-4">
+                    <div><label className="text-xs font-bold text-slate-500">Ragione Sociale</label><input className="w-full p-2 border rounded mt-1" value={newSupplier.name} onChange={e => setNewSupplier({...newSupplier, name: e.target.value})} placeholder="Es. Mario Rossi SRL" /></div>
+                    <div><label className="text-xs font-bold text-slate-500">P.IVA</label><input className="w-full p-2 border rounded mt-1" value={newSupplier.vat} onChange={e => setNewSupplier({...newSupplier, vat: e.target.value})} placeholder="11 cifre" /></div>
+                    <div><label className="text-xs font-bold text-slate-500">Email</label><input className="w-full p-2 border rounded mt-1" value={newSupplier.email} onChange={e => setNewSupplier({...newSupplier, email: e.target.value})} placeholder="amministrazione@fornitore.it" /></div>
+                    <div><label className="text-xs font-bold text-slate-500">Telefono</label><input className="w-full p-2 border rounded mt-1" value={newSupplier.phone} onChange={e => setNewSupplier({...newSupplier, phone: e.target.value})} placeholder="+39 ..." /></div>
+                    <div><label className="text-xs font-bold text-slate-500">Indirizzo</label><input className="w-full p-2 border rounded mt-1" value={newSupplier.address} onChange={e => setNewSupplier({...newSupplier, address: e.target.value})} placeholder="Via Roma 1, Milano" /></div>
+                    
+                    <button onClick={handleSaveSupplier} className="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold hover:bg-indigo-700 mt-2">Salva Fornitore</button>
+                </div>
+            </div>
+        </div>
       )}
     </div>
   );
