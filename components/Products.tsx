@@ -3,16 +3,17 @@ import { Product, ProductVariant, StoreSettings } from '../types';
 import { 
   Plus, Search, Edit2, Trash2, X, Save, Package, 
   Upload, ScanLine, Loader2, ArrowUpCircle, ArrowDownCircle,
-  Grid3X3, Wand2, Sparkles, Scale, Eye, EyeOff, Calculator, DollarSign
+  Grid3X3, Wand2, Sparkles, Scale, Eye, EyeOff, Calculator, DollarSign, Globe
 } from 'lucide-react';
 import { analyzeProductImage, generateProductDescription, suggestProductPricing } from '../services/geminiService';
 
 interface ProductsProps {
   products: Product[];
   setProducts: React.Dispatch<React.SetStateAction<Product[]>>;
+  settings: StoreSettings;
 }
 
-const Products: React.FC<ProductsProps> = ({ products, setProducts }) => {
+const Products: React.FC<ProductsProps> = ({ products, setProducts, settings }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   
@@ -45,43 +46,53 @@ const Products: React.FC<ProductsProps> = ({ products, setProducts }) => {
   // --- Helpers ---
   const calculateTotalStock = (p: Product) => p.variants?.reduce((acc, v) => acc + v.stock, 0) || 0;
 
-  // --- Mock settings retrieval (In real app, pass settings as props) ---
-  const defaultSettings: StoreSettings = {
-      vatRate: 22,
-      defaultMarkup: 100, // 100% markup
-      currency: '€',
-      storeName: '', companyName: '', vatNumber: '', fiscalCode: '', address: '', city: '', zip: '', email: '', phone: '',
-      integrations: { printerIp: '', printerBrand: 'NONE', printerEnabled: false, sumUpEmail: '', sumUpEnabled: false }
-  };
-
   // --- Pricing Logic ---
-  const updatePricing = (field: 'costPrice' | 'markup' | 'price' | 'onlinePrice', value: number) => {
-      const vat = defaultSettings.vatRate / 100;
+  const updatePricing = (field: 'costPrice' | 'markup' | 'price' | 'onlineMarkup' | 'onlinePrice', value: number) => {
+      const vat = settings.vatRate / 100;
       let newData = { ...currentProduct, [field]: value };
 
-      if (field === 'costPrice') {
-          // If cost changes, recalculate sales price based on current markup
-          const markup = currentProduct.markup || defaultSettings.defaultMarkup;
-          const netPrice = value + (value * (markup / 100));
+      // 1. Calculate Store Price based on Cost and Store Markup
+      if (field === 'costPrice' || field === 'markup') {
+          const cost = newData.costPrice || 0;
+          const markup = (newData.markup !== undefined) ? newData.markup : settings.defaultMarkup;
+          
+          const netPrice = cost + (cost * (markup / 100));
           const finalPrice = netPrice * (1 + vat);
           newData.price = parseFloat(finalPrice.toFixed(2));
-          // If online price wasn't set manually, sync it
-          if (!currentProduct.onlinePrice) newData.onlinePrice = newData.price;
-      } else if (field === 'markup') {
-          // If markup changes, recalculate price
-          const cost = currentProduct.costPrice || 0;
-          const netPrice = cost + (cost * (value / 100));
-          const finalPrice = netPrice * (1 + vat);
-          newData.price = parseFloat(finalPrice.toFixed(2));
-      } else if (field === 'price') {
-          // If final price is manually set, reverse calc markup (approx)
-          const cost = currentProduct.costPrice || 0;
+          newData.markup = markup;
+      } 
+      // Reverse: Store Price -> Markup
+      else if (field === 'price') {
+          const cost = newData.costPrice || 0;
           if (cost > 0) {
               const netPrice = value / (1 + vat);
               const margin = netPrice - cost;
               const newMarkup = (margin / cost) * 100;
               newData.markup = parseFloat(newMarkup.toFixed(1));
           }
+      }
+
+      // 2. Calculate Online Price based on Store Price and Online Markup
+      // The online markup is a +/- % applied to the Store Price (or Cost, but typically Retail + %)
+      // Let's assume it modifies the Store Price.
+      
+      const storePrice = newData.price || 0;
+      // If user sets onlineMarkup, recalculate onlinePrice
+      if (field === 'onlineMarkup' || field === 'price' || field === 'costPrice' || field === 'markup') {
+          // If onlineMarkup is not explicitly set in product, use default
+          const om = (newData.onlineMarkup !== undefined) ? newData.onlineMarkup : settings.defaultOnlineMarkup;
+          
+          const onlineFinal = storePrice * (1 + (om / 100));
+          newData.onlinePrice = parseFloat(onlineFinal.toFixed(2));
+          newData.onlineMarkup = om;
+      }
+      // Reverse: Online Price -> Online Markup
+      else if (field === 'onlinePrice') {
+         if (storePrice > 0) {
+             const diff = value - storePrice;
+             const newOm = (diff / storePrice) * 100;
+             newData.onlineMarkup = parseFloat(newOm.toFixed(1));
+         }
       }
 
       setCurrentProduct(newData);
@@ -126,7 +137,8 @@ const Products: React.FC<ProductsProps> = ({ products, setProducts }) => {
         name: '',
         category: 'Uomo',
         costPrice: 0,
-        markup: defaultSettings.defaultMarkup,
+        markup: settings.defaultMarkup,
+        onlineMarkup: settings.defaultOnlineMarkup, // Use default from settings
         price: 0,
         onlinePrice: 0,
         isOnline: true,
@@ -248,8 +260,10 @@ const Products: React.FC<ProductsProps> = ({ products, setProducts }) => {
             description: analysis.description || '',
             category: analysis.category || 'Accessori',
             costPrice: 0,
-            markup: 100,
+            markup: settings.defaultMarkup,
+            onlineMarkup: settings.defaultOnlineMarkup,
             price: 0,
+            onlinePrice: 0,
             isOnline: true,
             imageUrl: URL.createObjectURL(file),
             material: analysis.material || '',
@@ -418,33 +432,46 @@ const Products: React.FC<ProductsProps> = ({ products, setProducts }) => {
                     {/* Pricing Engine */}
                     <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
                         <div className="flex justify-between items-center mb-3">
-                            <h4 className="font-bold text-indigo-900 flex items-center gap-2"><Calculator size={16}/> Pricing Engine & Ricarico</h4>
+                            <h4 className="font-bold text-indigo-900 flex items-center gap-2"><Calculator size={16}/> Pricing Engine</h4>
                             <button onClick={handleSuggestPrice} disabled={isSuggestingPrice} className="text-xs bg-white text-indigo-600 border border-indigo-200 px-3 py-1 rounded-full font-bold hover:bg-indigo-600 hover:text-white transition flex items-center gap-1">
                                 {isSuggestingPrice ? <Loader2 size={12} className="animate-spin"/> : <Sparkles size={12}/>} AI Advisor
                             </button>
                         </div>
                         
-                        <div className="grid grid-cols-4 gap-4 items-end">
+                        <div className="grid grid-cols-3 gap-4 items-end mb-4">
                             <div>
                                 <label className="text-xs font-bold text-slate-500 mb-1 block">Costo Acquisto (€)</label>
                                 <input type="number" step="0.01" value={currentProduct.costPrice || ''} onChange={e => updatePricing('costPrice', parseFloat(e.target.value))} className="w-full p-2 border border-slate-200 rounded-lg" placeholder="0.00"/>
                             </div>
                             <div>
-                                <label className="text-xs font-bold text-slate-500 mb-1 block text-indigo-600">Markup (%)</label>
+                                <label className="text-xs font-bold text-slate-500 mb-1 block text-indigo-600">Ricarico Negozio (%)</label>
                                 <input type="number" step="1" value={currentProduct.markup || 0} onChange={e => updatePricing('markup', parseFloat(e.target.value))} className="w-full p-2 border border-indigo-200 rounded-lg text-indigo-700 font-bold bg-white" />
                             </div>
                             <div>
-                                <label className="text-xs font-bold text-slate-500 mb-1 block">Listino Negozio (€)</label>
+                                <label className="text-xs font-bold text-slate-500 mb-1 block">Prezzo Negozio (€)</label>
                                 <input type="number" step="0.01" value={currentProduct.price || 0} onChange={e => updatePricing('price', parseFloat(e.target.value))} className="w-full p-2 border border-slate-200 rounded-lg font-bold text-lg" />
                             </div>
+                        </div>
+
+                        {/* Online Pricing Section */}
+                        <div className="border-t border-indigo-200 pt-3 grid grid-cols-2 gap-4">
+                             <div>
+                                <label className="text-xs font-bold text-slate-500 mb-1 block flex items-center gap-1"><Globe size={12}/> Ricarico/Sconto Online (%)</label>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-indigo-400 font-bold">VS Store</span>
+                                  <input type="number" step="1" value={currentProduct.onlineMarkup ?? settings.defaultOnlineMarkup} onChange={e => updatePricing('onlineMarkup', parseFloat(e.target.value))} className="w-full p-2 border border-slate-200 rounded-lg bg-white/50" placeholder="0" />
+                                </div>
+                                <p className="text-[9px] text-slate-400 mt-1">Mettere negativo per sconto (es. -10)</p>
+                            </div>
                             <div>
-                                <label className="text-xs font-bold text-slate-500 mb-1 block">Listino Online (€)</label>
-                                <input type="number" step="0.01" value={currentProduct.onlinePrice || 0} onChange={e => updatePricing('onlinePrice', parseFloat(e.target.value))} className="w-full p-2 border border-slate-200 rounded-lg" placeholder="Opzionale"/>
+                                <label className="text-xs font-bold text-slate-500 mb-1 block">Prezzo Online (€)</label>
+                                <input type="number" step="0.01" value={currentProduct.onlinePrice || 0} onChange={e => updatePricing('onlinePrice', parseFloat(e.target.value))} className="w-full p-2 border border-slate-200 rounded-lg text-slate-700" />
                             </div>
                         </div>
+
                         <div className="mt-2 text-xs text-indigo-800 flex gap-4">
-                            <span>IVA Calcolata: {defaultSettings.vatRate}%</span>
-                            <span>Margine Netto: €{((currentProduct.price || 0) / (1 + defaultSettings.vatRate/100) - (currentProduct.costPrice || 0)).toFixed(2)}</span>
+                            <span>IVA Calcolata: {settings.vatRate}%</span>
+                            <span>Margine Netto: €{((currentProduct.price || 0) / (1 + settings.vatRate/100) - (currentProduct.costPrice || 0)).toFixed(2)}</span>
                         </div>
                     </div>
 

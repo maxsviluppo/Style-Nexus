@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Sale, Invoice, FinancialRecord, TransactionCategory, DetailedPaymentMethod } from '../types';
-import { TrendingUp, TrendingDown, PieChart, FileText, Plus, X, Calendar, Zap, Home, DollarSign, Briefcase, AlertCircle, CheckCircle, CalendarRange, ChevronDown, Filter, AlertTriangle } from 'lucide-react';
+import { TrendingUp, TrendingDown, PieChart, FileText, Plus, X, Calendar, Zap, Home, DollarSign, Briefcase, AlertCircle, CheckCircle, CalendarRange, ChevronDown, Filter, AlertTriangle, Edit2, Trash2 } from 'lucide-react';
 
 interface AccountingProps {
     sales: Sale[];
@@ -62,7 +62,8 @@ const Accounting: React.FC<AccountingProps> = ({ sales, invoices, financialRecor
         })),
         ...financialRecords.map(r => ({
             id: r.id, date: r.date, type: r.type, amount: r.amount,
-            desc: r.description, ref: r.category, category: r.category, isPaid: r.isPaid, method: r.paymentMethod
+            desc: r.description, ref: r.category, category: r.category, isPaid: r.isPaid, method: r.paymentMethod,
+            isEditable: true // Mark manual records as editable
         }))
     ];
 
@@ -106,10 +107,11 @@ const Accounting: React.FC<AccountingProps> = ({ sales, invoices, financialRecor
 
 
     // --- Handlers ---
-    const handleAddTransaction = () => {
+    const handleSaveTransaction = () => {
         if (!newTransaction.amount || !newTransaction.description) return;
+        
         const record: FinancialRecord = {
-            id: Date.now().toString(),
+            id: newTransaction.id || Date.now().toString(),
             date: newTransaction.date!,
             amount: parseFloat(newTransaction.amount.toString()),
             type: newTransaction.type as 'IN' | 'OUT',
@@ -119,9 +121,31 @@ const Accounting: React.FC<AccountingProps> = ({ sales, invoices, financialRecor
             isPaid: newTransaction.isPaid!,
             paymentMethod: newTransaction.paymentMethod as DetailedPaymentMethod
         };
-        setFinancialRecords([...financialRecords, record]);
+
+        if (newTransaction.id) {
+            // Edit Mode
+            setFinancialRecords(financialRecords.map(r => r.id === newTransaction.id ? record : r));
+        } else {
+            // New Mode
+            setFinancialRecords([...financialRecords, record]);
+        }
+        
         setIsTransactionModalOpen(false);
         setNewTransaction({ type: 'OUT', category: 'OTHER_EXPENSE', date: new Date().toISOString().split('T')[0], isPaid: true, amount: 0, description: '', paymentMethod: 'BANK_TRANSFER' });
+    };
+
+    const handleEditTransaction = (recordId: string) => {
+        const record = financialRecords.find(r => r.id === recordId);
+        if (record) {
+            setNewTransaction(record);
+            setIsTransactionModalOpen(true);
+        }
+    };
+
+    const handleDeleteTransaction = (recordId: string) => {
+        if (window.confirm("Sei sicuro di voler eliminare questo movimento?")) {
+            setFinancialRecords(financialRecords.filter(r => r.id !== recordId));
+        }
     };
 
     const markAsPaid = (id: string) => {
@@ -201,7 +225,7 @@ const Accounting: React.FC<AccountingProps> = ({ sales, invoices, financialRecor
                         <ChevronDown size={16} className="text-slate-400" />
                     </button>
 
-                    <button onClick={() => setIsTransactionModalOpen(true)} className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-indigo-700 flex items-center gap-2 shadow-lg shadow-indigo-200 whitespace-nowrap">
+                    <button onClick={() => { setNewTransaction({ type: 'OUT', category: 'OTHER_EXPENSE', date: new Date().toISOString().split('T')[0], isPaid: true, amount: 0, description: '', paymentMethod: 'BANK_TRANSFER' }); setIsTransactionModalOpen(true); }} className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-indigo-700 flex items-center gap-2 shadow-lg shadow-indigo-200 whitespace-nowrap">
                         <Plus size={20}/> <span className="hidden md:inline">Registra</span> Movimento
                     </button>
                 </div>
@@ -260,12 +284,13 @@ const Accounting: React.FC<AccountingProps> = ({ sales, invoices, financialRecor
                                     <th className="p-4 hidden sm:table-cell">Metodo</th>
                                     <th className="p-4 text-right">Importo</th>
                                     <th className="p-4 text-center">Stato</th>
+                                    <th className="p-4 text-right">Azioni</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
-                                {filteredTransactions.length === 0 && <tr><td colSpan={5} className="p-8 text-center text-slate-400">Nessun movimento in questo periodo</td></tr>}
+                                {filteredTransactions.length === 0 && <tr><td colSpan={6} className="p-8 text-center text-slate-400">Nessun movimento in questo periodo</td></tr>}
                                 {filteredTransactions.map((t) => (
-                                    <tr key={t.id + t.type} className="hover:bg-slate-50">
+                                    <tr key={t.id + t.type} className="hover:bg-slate-50 group">
                                         <td className="p-4 text-slate-600 whitespace-nowrap">{new Date(t.date).toLocaleDateString()}</td>
                                         <td className="p-4 font-medium text-slate-800">
                                             {t.desc}
@@ -286,6 +311,15 @@ const Accounting: React.FC<AccountingProps> = ({ sales, invoices, financialRecor
                                         <td className="p-4 text-center">
                                             {t.isPaid ? <CheckCircle size={16} className="text-green-500 inline"/> : <AlertCircle size={16} className="text-amber-500 inline"/>}
                                         </td>
+                                        <td className="p-4 text-right">
+                                            {/* Only show actions for manually added records (isEditable) */}
+                                            {(t as any).isEditable && (
+                                                <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button onClick={() => handleEditTransaction(t.id)} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded"><Edit2 size={16}/></button>
+                                                    <button onClick={() => handleDeleteTransaction(t.id)} className="p-1.5 text-rose-600 hover:bg-rose-50 rounded"><Trash2 size={16}/></button>
+                                                </div>
+                                            )}
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -301,7 +335,7 @@ const Accounting: React.FC<AccountingProps> = ({ sales, invoices, financialRecor
                             <p className="text-slate-400 text-sm text-center py-4">Nessuna scadenza in sospeso.</p>
                         ) : (
                             deadlines.map(d => (
-                                <div key={d.id} className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 relative overflow-hidden">
+                                <div key={d.id} className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 relative overflow-hidden group">
                                     <div className={`absolute top-0 left-0 bottom-0 w-1 ${new Date(d.dueDate!) < new Date() ? 'bg-red-500' : 'bg-amber-500'}`}></div>
                                     <div className="flex justify-between items-start mb-2">
                                         <div>
@@ -310,9 +344,12 @@ const Accounting: React.FC<AccountingProps> = ({ sales, invoices, financialRecor
                                         </div>
                                         <div className="font-bold text-rose-600">-€{d.amount}</div>
                                     </div>
-                                    <button onClick={() => markAsPaid(d.id)} className="w-full py-1.5 mt-2 bg-indigo-50 text-indigo-600 text-xs font-bold rounded hover:bg-indigo-100 transition">
-                                        Segna come Pagato
-                                    </button>
+                                    <div className="flex gap-2 mt-2">
+                                        <button onClick={() => markAsPaid(d.id)} className="flex-1 py-1.5 bg-indigo-50 text-indigo-600 text-xs font-bold rounded hover:bg-indigo-100 transition">
+                                            Segna come Pagato
+                                        </button>
+                                        <button onClick={() => handleEditTransaction(d.id)} className="p-1.5 text-slate-400 hover:text-indigo-600 bg-slate-50 rounded border border-slate-200"><Edit2 size={14}/></button>
+                                    </div>
                                 </div>
                             ))
                         )}
@@ -364,12 +401,12 @@ const Accounting: React.FC<AccountingProps> = ({ sales, invoices, financialRecor
                 </div>
             )}
 
-            {/* Modal Add Transaction */}
+            {/* Modal Add/Edit Transaction */}
             {isTransactionModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
                     <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
                         <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-xl font-bold text-slate-800">Registra Movimento</h3>
+                            <h3 className="text-xl font-bold text-slate-800">{newTransaction.id ? 'Modifica' : 'Registra'} Movimento</h3>
                             <button onClick={() => setIsTransactionModalOpen(false)}><X className="text-slate-400"/></button>
                         </div>
                         
@@ -439,8 +476,8 @@ const Accounting: React.FC<AccountingProps> = ({ sales, invoices, financialRecor
                                 </div>
                             )}
 
-                            <button onClick={handleAddTransaction} className="w-full py-3 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 mt-2">
-                                Salva Movimento
+                            <button onClick={handleSaveTransaction} className="w-full py-3 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 mt-2">
+                                {newTransaction.id ? 'Aggiorna' : 'Salva'} Movimento
                             </button>
                         </div>
                     </div>

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { StoreSettings } from '../types';
 import { 
     Settings, Save, FileText, Briefcase, 
-    Upload, Printer, Wifi, Percent
+    Upload, Printer, Wifi, Percent, Globe
 } from 'lucide-react';
 
 interface AdminProps {
@@ -69,9 +69,17 @@ const Admin: React.FC<AdminProps> = ({ settings, setSettings }) => {
                          <div className="space-y-3">
                             <div><label className="text-xs font-bold text-slate-500">IVA Default (%)</label><input type="number" value={localSettings.vatRate} onChange={e=>setLocalSettings({...localSettings, vatRate: parseFloat(e.target.value)})} className="w-full p-2 border rounded"/></div>
                             <div>
-                                <label className="text-xs font-bold text-slate-500">Ricarico Default (%)</label>
+                                <label className="text-xs font-bold text-slate-500">Ricarico Negozio Default (%)</label>
                                 <input type="number" value={localSettings.defaultMarkup || 100} onChange={e=>setLocalSettings({...localSettings, defaultMarkup: parseFloat(e.target.value)})} className="w-full p-2 border rounded"/>
-                                <p className="text-[10px] text-slate-400 mt-1">Applicato sui nuovi prodotti se non specificato diversamente.</p>
+                                <p className="text-[10px] text-slate-400 mt-1">Acquisto &rarr; Vendita Negozio</p>
+                            </div>
+                            <div className="pt-2 border-t border-slate-100 mt-2">
+                                <label className="text-xs font-bold text-slate-500 flex items-center gap-1"><Globe size={12}/> Listino Online Default (%)</label>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-slate-400">Negozio +/- %</span>
+                                    <input type="number" value={localSettings.defaultOnlineMarkup || 0} onChange={e=>setLocalSettings({...localSettings, defaultOnlineMarkup: parseFloat(e.target.value)})} className="flex-1 p-2 border rounded"/>
+                                </div>
+                                <p className="text-[10px] text-slate-400 mt-1">Es: +10% aumenta, -5% sconto online.</p>
                             </div>
                          </div>
                     </div>

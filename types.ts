@@ -34,9 +34,11 @@ export interface Product {
   
   // Pricing & Economics
   costPrice?: number; // Costo acquisto
-  markup?: number; // Ricarico %
-  price: number; // Prezzo vendita negozio (calcolato o manuale)
-  onlinePrice?: number; // Prezzo vendita online (opzionale)
+  markup?: number; // Ricarico % (Costo -> Negozio)
+  price: number; // Prezzo vendita negozio
+  
+  onlineMarkup?: number; // Ricarico/Sconto % specifico per Online (Negozio -> Online)
+  onlinePrice?: number; // Prezzo vendita online
   
   imageUrl: string;
   material?: string;
@@ -142,7 +144,8 @@ export interface StoreSettings {
   
   // Config
   vatRate: number;
-  defaultMarkup: number; // Nuovo default ricarico %
+  defaultMarkup: number; // Ricarico Default % (Acquisto -> Negozio)
+  defaultOnlineMarkup: number; // Ricarico Online Default % (Negozio -> Online)
   currency: string;
   
   // Hardware Integrations

@@ -33,6 +33,10 @@ const initialProducts: Product[] = [
     name: 'Cappotto Lana Merino', 
     category: 'Uomo', 
     price: 129.99, 
+    costPrice: 60.00,
+    markup: 116.65,
+    onlineMarkup: 0,
+    onlinePrice: 129.99,
     imageUrl: 'https://picsum.photos/400/500?random=1',
     material: '100% Lana Merino',
     isOnline: true,
@@ -45,7 +49,11 @@ const initialProducts: Product[] = [
     id: '2', 
     name: 'Vestito Floreale', 
     category: 'Donna', 
-    price: 59.99, 
+    price: 59.99,
+    costPrice: 20.00,
+    markup: 200,
+    onlineMarkup: 10,
+    onlinePrice: 65.99, 
     imageUrl: 'https://picsum.photos/400/500?random=2',
     material: 'Cotone',
     isOnline: true,
@@ -66,7 +74,8 @@ const initialSettings: StoreSettings = {
     email: 'amministrazione@stylenexus.it',
     phone: '+39 02 1234567',
     vatRate: 22,
-    defaultMarkup: 40,
+    defaultMarkup: 100, // Ricarico negozio
+    defaultOnlineMarkup: 0, // Stesso prezzo online di base
     currency: '€',
     integrations: {
       printerIp: '192.168.1.100',
@@ -98,7 +107,7 @@ const App: React.FC = () => {
       case View.DASHBOARD:
         return <Dashboard />;
       case View.PRODUCTS:
-        return <Products products={products} setProducts={setProducts} />;
+        return <Products products={products} setProducts={setProducts} settings={settings} />;
       case View.SUPPLY_CHAIN:
         return <SupplyChain products={products} setProducts={setProducts} invoices={invoices} setInvoices={setInvoices} />;
       case View.CATEGORIES:
