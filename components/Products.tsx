@@ -3,7 +3,7 @@ import { Product, ProductVariant } from '../types';
 import { 
   Plus, Search, Edit2, Trash2, X, Save, Package, 
   Upload, ScanLine, Loader2, ArrowUpCircle, ArrowDownCircle,
-  Grid3X3, Wand2, Sparkles
+  Grid3X3, Wand2, Sparkles, Scale
 } from 'lucide-react';
 import { analyzeProductImage, generateProductDescription } from '../services/geminiService';
 
@@ -69,6 +69,7 @@ const Products: React.FC<ProductsProps> = ({ products, setProducts }) => {
         price: 0,
         imageUrl: 'https://picsum.photos/400/500?random=' + Math.floor(Math.random() * 1000),
         material: '',
+        weight: 0,
         variants: []
       });
     }
@@ -319,6 +320,14 @@ const Products: React.FC<ProductsProps> = ({ products, setProducts }) => {
                       <div>
                         <label className="text-xs font-bold text-slate-500">Materiale</label>
                         <input type="text" value={currentProduct.material || ''} onChange={e => setCurrentProduct({...currentProduct, material: e.target.value})} className="w-full p-2 border border-slate-200 rounded-lg" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-slate-500">Prezzo (€)</label>
+                        <input type="number" step="0.01" value={currentProduct.price} onChange={e => setCurrentProduct({...currentProduct, price: parseFloat(e.target.value)})} className="w-full p-2 border border-slate-200 rounded-lg" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-slate-500 flex items-center gap-1"><Scale size={12}/> Peso (kg)</label>
+                        <input type="number" step="0.01" value={currentProduct.weight || ''} onChange={e => setCurrentProduct({...currentProduct, weight: parseFloat(e.target.value)})} className="w-full p-2 border border-slate-200 rounded-lg" placeholder="Opzionale" />
                       </div>
                     </div>
                     <div>

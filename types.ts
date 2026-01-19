@@ -5,7 +5,8 @@ export enum View {
   STOREFRONT = 'STOREFRONT',
   MARKETING = 'MARKETING',
   ADMIN = 'ADMIN',
-  SUPPLY_CHAIN = 'SUPPLY_CHAIN' // Nuova vista Fornitori/Ordini
+  SUPPLY_CHAIN = 'SUPPLY_CHAIN',
+  SALES = 'SALES' // Nuova vista Vendita al banco
 }
 
 export interface Category {
@@ -19,7 +20,7 @@ export interface ProductVariant {
   id: string;
   size: string;
   color: string;
-  barcode: string; // EAN specifico per la variante
+  barcode: string; 
   stock: number;
 }
 
@@ -31,14 +32,15 @@ export interface Product {
   price: number;
   imageUrl: string;
   material?: string;
+  weight?: number; // Nuovo campo opzionale (kg)
   variants: ProductVariant[]; 
-  supplierId?: string; // Link al fornitore
+  supplierId?: string;
 }
 
 export interface Supplier {
   id: string;
   name: string;
-  vat: string; // P.IVA
+  vat: string;
   email: string;
   phone: string;
   address: string;
@@ -47,7 +49,7 @@ export interface Supplier {
 export interface InvoiceItem {
   barcode: string;
   productName: string;
-  variantDetails: string; // Es: "L / Rosso"
+  variantDetails: string;
   quantity: number;
   costPrice: number;
 }
@@ -59,7 +61,31 @@ export interface Invoice {
   date: string;
   items: InvoiceItem[];
   totalAmount: number;
-  status: 'DRAFT' | 'COMPLETED'; // COMPLETED aggiorna il magazzino
+  status: 'DRAFT' | 'COMPLETED';
+}
+
+export interface SaleItem {
+  productId: string;
+  variantId: string;
+  name: string;
+  details: string; // "L / Rosso"
+  price: number;
+  quantity: number;
+}
+
+export interface Sale {
+  id: string;
+  date: string;
+  items: SaleItem[];
+  total: number;
+  paymentMethod: 'CASH' | 'CARD';
+}
+
+export interface StoreSettings {
+  storeName: string;
+  address: string;
+  vatRate: number;
+  currency: string;
 }
 
 export interface StatData {
