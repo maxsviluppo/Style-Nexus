@@ -14,18 +14,25 @@ export interface Category {
   subCategories?: Category[];
 }
 
+export interface ProductVariant {
+  id: string;
+  size: string;
+  color: string;
+  barcode: string; // EAN specifico per la variante
+  stock: number;
+}
+
 export interface Product {
   id: string;
   name: string;
   description?: string;
   category: string;
   price: number;
-  stock: number;
   imageUrl: string;
-  size?: string;
-  color?: string;
   material?: string;
-  barcode?: string;
+  variants: ProductVariant[]; // Lista delle varianti
+  // Helper per visualizzazione rapida
+  totalStock?: number; 
 }
 
 export interface StatData {

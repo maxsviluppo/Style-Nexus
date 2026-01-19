@@ -1,7 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 
 const apiKey = process.env.API_KEY || '';
-// Initialize AI only if key exists to avoid crash, handle gracefully in UI
 const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
 export const generateMarketingCopy = async (productName: string, targetAudience: string, tone: string): Promise<string> => {
@@ -45,21 +44,21 @@ export const analyzeProductImage = async (base64Image: string): Promise<any> => 
             }
           },
           {
-            text: `Analizza questa immagine di un capo di abbigliamento. Restituisci un oggetto JSON valido con le seguenti proprietà:
-            - name: un nome commerciale breve in italiano
-            - description: una breve descrizione (max 1 frase)
-            - category: una tra "Uomo", "Donna", "Bambino", "Accessori" (scegli la più probabile)
-            - color: il colore principale
-            - material: il materiale apparente (es. Cotone, Lana, Denim, Pelle)
+            text: `Analizza questa immagine di moda per un gestionale di magazzino. Restituisci un oggetto JSON con:
+            - name: nome commerciale breve (es. "Camicia Lino Coreana")
+            - description: descrizione tecnica di 1 frase
+            - category: una tra "Uomo", "Donna", "Bambino", "Accessori"
+            - material: materiale stimato (es. "100% Cotone")
+            - detected_colors: array di stringhe con i colori principali visti (es. ["Bianco", "Blu"])
+            - suggested_sizes: array di stringhe suggerite per questo tipo di capo (es. ["S", "M", "L", "XL"] se è adulto, o altezze se bambino)
             
-            Non includere markdown, solo il JSON grezzo.`
+            NON usare Markdown. Solo JSON puro.`
           }
         ]
       }
     });
 
     const text = response.text || "{}";
-    // Clean potential markdown code blocks
     const jsonString = text.replace(/```json/g, '').replace(/```/g, '').trim();
     return JSON.parse(jsonString);
   } catch (error) {
