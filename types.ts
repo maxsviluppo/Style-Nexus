@@ -6,7 +6,9 @@ export enum View {
   MARKETING = 'MARKETING',
   ADMIN = 'ADMIN',
   SUPPLY_CHAIN = 'SUPPLY_CHAIN',
-  SALES = 'SALES' // Nuova vista Vendita al banco
+  SALES = 'SALES',
+  ACCOUNTING = 'ACCOUNTING',
+  CFO = 'CFO'
 }
 
 export interface Category {
@@ -78,7 +80,20 @@ export interface Sale {
   date: string;
   items: SaleItem[];
   total: number;
-  paymentMethod: 'CASH' | 'CARD';
+  paymentMethod: 'CASH' | 'CARD' | 'SUMUP';
+}
+
+export type TransactionCategory = 'RENT' | 'UTILITIES' | 'TAXES' | 'SALARY' | 'OTHER_EXPENSE' | 'OTHER_INCOME' | 'GRANT';
+
+export interface FinancialRecord {
+  id: string;
+  date: string;
+  amount: number;
+  type: 'IN' | 'OUT';
+  category: TransactionCategory;
+  description: string;
+  dueDate?: string; // Per le scadenze
+  isPaid: boolean;
 }
 
 export interface StoreSettings {

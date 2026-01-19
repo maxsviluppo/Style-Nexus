@@ -10,9 +10,11 @@ import {
   X,
   LogOut,
   Truck,
-  CreditCard
+  CreditCard,
+  PieChart,
+  BrainCircuit
 } from 'lucide-react';
-import { View, Product, Sale, StoreSettings, Invoice } from './types';
+import { View, Product, Sale, StoreSettings, Invoice, FinancialRecord } from './types';
 import Dashboard from './components/Dashboard';
 import Categories from './components/Categories';
 import Marketing from './components/Marketing';
@@ -21,6 +23,8 @@ import Products from './components/Products';
 import SupplyChain from './components/SupplyChain';
 import Sales from './components/Sales';
 import Admin from './components/Admin';
+import Accounting from './components/Accounting';
+import CfoAi from './components/CfoAi';
 
 // Initial Data
 const initialProducts: Product[] = [
@@ -63,6 +67,11 @@ const initialSettings: StoreSettings = {
     currency: '€'
 };
 
+const initialFinancialRecords: FinancialRecord[] = [
+  { id: 'f1', date: new Date().toISOString().split('T')[0], amount: 1200, type: 'OUT', category: 'RENT', description: 'Affitto Negozio Mensile', isPaid: true },
+  { id: 'f2', date: new Date(Date.now() + 86400000 * 5).toISOString().split('T')[0], amount: 450, type: 'OUT', category: 'UTILITIES', description: 'Bolletta Luce', dueDate: new Date(Date.now() + 86400000 * 5).toISOString().split('T')[0], isPaid: false },
+];
+
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<View>(View.DASHBOARD);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -70,7 +79,8 @@ const App: React.FC = () => {
   // Application State
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const [sales, setSales] = useState<Sale[]>([]);
-  const [invoices, setInvoices] = useState<Invoice[]>([]); // Lifted State
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [financialRecords, setFinancialRecords] = useState<FinancialRecord[]>(initialFinancialRecords);
   const [settings, setSettings] = useState<StoreSettings>(initialSettings);
 
   const renderView = () => {
@@ -89,8 +99,12 @@ const App: React.FC = () => {
         return <Storefront products={products} />;
       case View.SALES:
         return <Sales products={products} setProducts={setProducts} sales={sales} setSales={setSales} />;
+      case View.ACCOUNTING:
+        return <Accounting sales={sales} invoices={invoices} financialRecords={financialRecords} setFinancialRecords={setFinancialRecords} />;
+      case View.CFO:
+        return <CfoAi sales={sales} invoices={invoices} financialRecords={financialRecords} />;
       case View.ADMIN:
-        return <Admin settings={settings} setSettings={setSettings} sales={sales} invoices={invoices} />;
+        return <Admin settings={settings} setSettings={setSettings} />;
       default:
         return <Dashboard />;
     }
@@ -125,7 +139,7 @@ const App: React.FC = () => {
           <h1 className="text-xl font-bold text-slate-800 leading-tight">
             {settings.storeName}
           </h1>
-          <p className="text-xs text-slate-400 mt-1">Retail Management v2.2</p>
+          <p className="text-xs text-slate-400 mt-1">Retail Management v2.4</p>
         </div>
         
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
@@ -136,7 +150,12 @@ const App: React.FC = () => {
           <NavItem view={View.CATEGORIES} icon={Layers} label="Categorie" />
           <NavItem view={View.STOREFRONT} icon={Store} label="Vetrina" />
           <NavItem view={View.MARKETING} icon={Megaphone} label="Marketing AI" />
-          <NavItem view={View.ADMIN} icon={Settings} label="Amministrazione" />
+          <div className="my-4 border-t border-slate-100 pt-2">
+            <p className="px-4 text-xs font-bold text-slate-400 uppercase mb-1">Finanza</p>
+            <NavItem view={View.ACCOUNTING} icon={PieChart} label="Contabilità" />
+            <NavItem view={View.CFO} icon={BrainCircuit} label="Report & CFO AI" />
+          </div>
+          <NavItem view={View.ADMIN} icon={Settings} label="Impostazioni" />
         </nav>
 
         <div className="p-4 border-t border-slate-100">
@@ -159,6 +178,8 @@ const App: React.FC = () => {
               <NavItem view={View.SALES} icon={CreditCard} label="Vendita" />
               <NavItem view={View.PRODUCTS} icon={ShoppingBag} label="Prodotti" />
               <NavItem view={View.STOREFRONT} icon={Store} label="Vetrina" />
+              <NavItem view={View.ACCOUNTING} icon={PieChart} label="Contabilità" />
+              <NavItem view={View.CFO} icon={BrainCircuit} label="Report AI" />
               <NavItem view={View.ADMIN} icon={Settings} label="Admin" />
             </nav>
           </div>
