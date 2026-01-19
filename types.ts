@@ -82,8 +82,30 @@ export interface Sale {
 }
 
 export interface StoreSettings {
+  // General
   storeName: string;
+  logoUrl?: string;
+  
+  // Fiscal
+  companyName: string; // Ragione Sociale
+  vatNumber: string; // P.IVA
+  fiscalCode: string; // Codice Fiscale
+  sdiCode?: string; // Codice Univoco
+  pec?: string;
   address: string;
+  city: string;
+  zip: string;
+  
+  // Contacts
+  email: string;
+  phone: string;
+  website?: string;
+  
+  // Social
+  instagram?: string;
+  facebook?: string;
+  
+  // Config
   vatRate: number;
   currency: string;
 }

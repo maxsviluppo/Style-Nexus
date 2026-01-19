@@ -94,3 +94,39 @@ export const parseInvoiceImage = async (base64Image: string): Promise<any> => {
     return null;
   }
 };
+
+export const analyzeFinancialContext = async (
+  income: number, 
+  expenses: number, 
+  transactionsCount: number,
+  storeType: string
+): Promise<string> => {
+  if (!ai) return "API Key mancante.";
+  try {
+    const profit = income - expenses;
+    const margin = income > 0 ? ((profit / income) * 100).toFixed(1) : 0;
+    
+    const prompt = `Agisci come un CFO (Direttore Finanziario) esperto per un negozio di abbigliamento (${storeType}).
+    Analizza questi dati sintetici attuali:
+    - Ricavi Totali: €${income}
+    - Costi Totali (Fatture Fornitori): €${expenses}
+    - Utile Netto: €${profit}
+    - Margine: ${margin}%
+    - Numero Transazioni: ${transactionsCount}
+
+    Fornisci un'analisi strategica breve (max 150 parole) in punti elenco:
+    1. Valutazione della salute finanziaria attuale.
+    2. Un consiglio specifico per ridurre i costi o ottimizzare il magazzino.
+    3. Un consiglio per aumentare le vendite o il margine medio.
+    
+    Usa un tono professionale ma proattivo. In italiano.`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: prompt
+    });
+    return response.text || "Impossibile generare analisi.";
+  } catch (error) {
+    return "Errore servizio AI.";
+  }
+};

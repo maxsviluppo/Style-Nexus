@@ -12,7 +12,7 @@ import {
   Truck,
   CreditCard
 } from 'lucide-react';
-import { View, Product, Sale, StoreSettings } from './types';
+import { View, Product, Sale, StoreSettings, Invoice } from './types';
 import Dashboard from './components/Dashboard';
 import Categories from './components/Categories';
 import Marketing from './components/Marketing';
@@ -51,7 +51,14 @@ const initialProducts: Product[] = [
 
 const initialSettings: StoreSettings = {
     storeName: 'StyleNexus Boutique',
-    address: 'Via della Moda 12, Milano',
+    companyName: 'StyleNexus SRL',
+    vatNumber: 'IT12345678901',
+    fiscalCode: '12345678901',
+    address: 'Via della Moda 12',
+    city: 'Milano',
+    zip: '20100',
+    email: 'amministrazione@stylenexus.it',
+    phone: '+39 02 1234567',
     vatRate: 22,
     currency: '€'
 };
@@ -59,8 +66,11 @@ const initialSettings: StoreSettings = {
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<View>(View.DASHBOARD);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  // Application State
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const [sales, setSales] = useState<Sale[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]); // Lifted State
   const [settings, setSettings] = useState<StoreSettings>(initialSettings);
 
   const renderView = () => {
@@ -70,7 +80,7 @@ const App: React.FC = () => {
       case View.PRODUCTS:
         return <Products products={products} setProducts={setProducts} />;
       case View.SUPPLY_CHAIN:
-        return <SupplyChain products={products} setProducts={setProducts} />;
+        return <SupplyChain products={products} setProducts={setProducts} invoices={invoices} setInvoices={setInvoices} />;
       case View.CATEGORIES:
         return <Categories />;
       case View.MARKETING:
@@ -80,7 +90,7 @@ const App: React.FC = () => {
       case View.SALES:
         return <Sales products={products} setProducts={setProducts} sales={sales} setSales={setSales} />;
       case View.ADMIN:
-        return <Admin settings={settings} setSettings={setSettings} sales={sales} />;
+        return <Admin settings={settings} setSettings={setSettings} sales={sales} invoices={invoices} />;
       default:
         return <Dashboard />;
     }
@@ -106,11 +116,16 @@ const App: React.FC = () => {
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden">
       <aside className="hidden md:flex flex-col w-64 bg-white border-r border-slate-200 h-full">
-        <div className="p-6 border-b border-slate-100">
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+        <div className="p-6 border-b border-slate-100 flex flex-col items-start">
+           {settings.logoUrl ? (
+             <img src={settings.logoUrl} className="h-10 mb-3 object-contain" alt="Logo" />
+           ) : (
+             <div className="h-10 w-10 bg-indigo-100 rounded-lg flex items-center justify-center text-indigo-600 font-bold mb-3">SN</div>
+           )}
+          <h1 className="text-xl font-bold text-slate-800 leading-tight">
             {settings.storeName}
           </h1>
-          <p className="text-xs text-slate-400 mt-1">Retail Management v2.1</p>
+          <p className="text-xs text-slate-400 mt-1">Retail Management v2.2</p>
         </div>
         
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">

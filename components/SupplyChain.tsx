@@ -6,6 +6,8 @@ import { parseInvoiceImage } from '../services/geminiService';
 interface SupplyChainProps {
   products: Product[];
   setProducts: React.Dispatch<React.SetStateAction<Product[]>>;
+  invoices: Invoice[];
+  setInvoices: React.Dispatch<React.SetStateAction<Invoice[]>>;
 }
 
 const mockSuppliers: Supplier[] = [
@@ -13,12 +15,11 @@ const mockSuppliers: Supplier[] = [
   { id: '2', name: 'Tessuti & Co', vat: '98765432109', email: 'ordini@tessuti.com', phone: '069876543', address: 'Roma Est 5' },
 ];
 
-const SupplyChain: React.FC<SupplyChainProps> = ({ products, setProducts }) => {
+const SupplyChain: React.FC<SupplyChainProps> = ({ products, setProducts, invoices, setInvoices }) => {
   const [activeTab, setActiveTab] = useState<'SUPPLIERS' | 'INVOICES'>('INVOICES');
   const [suppliers, setSuppliers] = useState<Supplier[]>(mockSuppliers);
   
-  // Invoice State
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  // Invoice UI State
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
   const [currentInvoice, setCurrentInvoice] = useState<Partial<Invoice>>({
     items: [], status: 'DRAFT', date: new Date().toISOString().split('T')[0]
@@ -30,7 +31,7 @@ const SupplyChain: React.FC<SupplyChainProps> = ({ products, setProducts }) => {
 
   // Helper for invoice item entry
   const [newItemEan, setNewItemEan] = useState('');
-  const [newItemName, setNewItemName] = useState(''); // Autodetected name
+  const [newItemName, setNewItemName] = useState(''); 
   const [newItemQty, setNewItemQty] = useState(1);
   const [newItemCost, setNewItemCost] = useState(0);
 
@@ -71,13 +72,11 @@ const SupplyChain: React.FC<SupplyChainProps> = ({ products, setProducts }) => {
       const parsedData = await parseInvoiceImage(base64);
 
       if (parsedData) {
-        // Map parsed items AND Cross-reference with DB
         const newItems: InvoiceItem[] = parsedData.items?.map((item: any) => {
            let dbName = item.productName || 'Articolo Rilevato';
            let dbVariant = 'Da verificare';
            const barcode = item.barcode || '';
 
-           // Lookup in local DB to fix AI data
            if (barcode) {
              for (const p of products) {
                  const v = p.variants.find(v => v.barcode === barcode);
@@ -237,7 +236,6 @@ const SupplyChain: React.FC<SupplyChainProps> = ({ products, setProducts }) => {
                     <button onClick={() => setIsInvoiceModalOpen(false)}><X className="text-slate-400"/></button>
                 </div>
                 
-                {/* AI Import Section */}
                 <div className="bg-indigo-50 p-4 border-b border-indigo-100 flex justify-between items-center">
                    <div className="flex items-center gap-2 text-indigo-800">
                      <Sparkles size={20}/>
