@@ -4,7 +4,8 @@ export enum View {
   CATEGORIES = 'CATEGORIES',
   STOREFRONT = 'STOREFRONT',
   MARKETING = 'MARKETING',
-  ADMIN = 'ADMIN'
+  ADMIN = 'ADMIN',
+  SUPPLY_CHAIN = 'SUPPLY_CHAIN' // Nuova vista Fornitori/Ordini
 }
 
 export interface Category {
@@ -30,9 +31,35 @@ export interface Product {
   price: number;
   imageUrl: string;
   material?: string;
-  variants: ProductVariant[]; // Lista delle varianti
-  // Helper per visualizzazione rapida
-  totalStock?: number; 
+  variants: ProductVariant[]; 
+  supplierId?: string; // Link al fornitore
+}
+
+export interface Supplier {
+  id: string;
+  name: string;
+  vat: string; // P.IVA
+  email: string;
+  phone: string;
+  address: string;
+}
+
+export interface InvoiceItem {
+  barcode: string;
+  productName: string;
+  variantDetails: string; // Es: "L / Rosso"
+  quantity: number;
+  costPrice: number;
+}
+
+export interface Invoice {
+  id: string;
+  supplierId: string;
+  invoiceNumber: string;
+  date: string;
+  items: InvoiceItem[];
+  totalAmount: number;
+  status: 'DRAFT' | 'COMPLETED'; // COMPLETED aggiorna il magazzino
 }
 
 export interface StatData {

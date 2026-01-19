@@ -4,65 +4,61 @@ const apiKey = process.env.API_KEY || '';
 const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
 export const generateMarketingCopy = async (productName: string, targetAudience: string, tone: string): Promise<string> => {
-  if (!ai) {
-    return "API Key non configurata. Impossibile generare contenuti.";
-  }
-
+  if (!ai) return "API Key non configurata.";
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: `Scrivi un breve e accattivante testo di marketing (max 100 parole) per un negozio di abbigliamento.
-      
-      Prodotto: ${productName}
-      Target: ${targetAudience}
-      Tono: ${tone}
-      
-      Includi emoji pertinenti e call to action. Rispondi in italiano.`,
+      contents: `Scrivi un breve testo di marketing (max 100 parole) per abbigliamento.
+      Prodotto: ${productName}, Target: ${targetAudience}, Tono: ${tone}. In italiano.`
     });
-
-    return response.text || "Nessun contenuto generato.";
+    return response.text || "Nessun contenuto.";
   } catch (error) {
-    console.error("Errore Gemini:", error);
-    return "Si è verificato un errore durante la generazione del contenuto.";
+    return "Errore generazione.";
+  }
+};
+
+export const generateProductDescription = async (product: any): Promise<string> => {
+  if (!ai) return "API Key non configurata.";
+  try {
+    // Estrai info utili
+    const variantsInfo = product.variants ? product.variants.map((v: any) => `${v.color} ${v.size}`).join(', ') : '';
+    
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Sei un copywriter esperto di moda. Scrivi una descrizione prodotto professionale, tecnica ma accattivante per un e-commerce.
+      Dati Prodotto:
+      - Nome: ${product.name}
+      - Categoria: ${product.category}
+      - Materiale: ${product.material}
+      - Varianti disponibili: ${variantsInfo}
+      
+      Usa circa 40-60 parole. Evidenzia qualità e vestibilità. Lingua: Italiano.`
+    });
+    return response.text || "";
+  } catch (error) {
+    console.error(error);
+    return "";
   }
 };
 
 export const analyzeProductImage = async (base64Image: string): Promise<any> => {
-  if (!ai) {
-    throw new Error("API Key mancante");
-  }
-
+  if (!ai) throw new Error("API Key mancante");
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
       contents: {
         parts: [
-          {
-            inlineData: {
-              mimeType: 'image/jpeg',
-              data: base64Image
-            }
-          },
-          {
-            text: `Analizza questa immagine di moda per un gestionale di magazzino. Restituisci un oggetto JSON con:
-            - name: nome commerciale breve (es. "Camicia Lino Coreana")
-            - description: descrizione tecnica di 1 frase
-            - category: una tra "Uomo", "Donna", "Bambino", "Accessori"
-            - material: materiale stimato (es. "100% Cotone")
-            - detected_colors: array di stringhe con i colori principali visti (es. ["Bianco", "Blu"])
-            - suggested_sizes: array di stringhe suggerite per questo tipo di capo (es. ["S", "M", "L", "XL"] se è adulto, o altezze se bambino)
-            
-            NON usare Markdown. Solo JSON puro.`
-          }
+          { inlineData: { mimeType: 'image/jpeg', data: base64Image } },
+          { text: `Analizza questa immagine moda. JSON puro:
+            { "name": "...", "description": "...", "category": "Uomo/Donna/...", "material": "...", 
+              "detected_colors": ["..."], "suggested_sizes": ["..."] }` }
         ]
       }
     });
-
     const text = response.text || "{}";
     const jsonString = text.replace(/```json/g, '').replace(/```/g, '').trim();
     return JSON.parse(jsonString);
   } catch (error) {
-    console.error("Errore analisi immagine:", error);
     return null;
   }
 };
