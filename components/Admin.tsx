@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { StoreSettings } from '../types';
 import { 
     Settings, Save, FileText, Briefcase, 
-    Upload, Printer, Wifi
+    Upload, Printer, Wifi, Percent
 } from 'lucide-react';
 
 interface AdminProps {
@@ -59,10 +59,21 @@ const Admin: React.FC<AdminProps> = ({ settings, setSettings }) => {
                     <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
                             <h4 className="font-bold text-slate-700 mb-4 flex items-center gap-2"><Briefcase size={18}/> Dati Generali</h4>
                             <div className="space-y-3">
-                            <div><label className="text-xs font-bold text-slate-500">Insegna Negozio</label><input type="text" value={localSettings.storeName} onChange={e=>setLocalSettings({...localSettings, storeName: e.target.value})} className="w-full p-2 border rounded"/></div>
-                            <div><label className="text-xs font-bold text-slate-500">Valuta (€)</label><input type="text" value={localSettings.currency} onChange={e=>setLocalSettings({...localSettings, currency: e.target.value})} className="w-full p-2 border rounded"/></div>
-                            <div><label className="text-xs font-bold text-slate-500">IVA Default (%)</label><input type="number" value={localSettings.vatRate} onChange={e=>setLocalSettings({...localSettings, vatRate: parseFloat(e.target.value)})} className="w-full p-2 border rounded"/></div>
+                                <div><label className="text-xs font-bold text-slate-500">Insegna Negozio</label><input type="text" value={localSettings.storeName} onChange={e=>setLocalSettings({...localSettings, storeName: e.target.value})} className="w-full p-2 border rounded"/></div>
+                                <div><label className="text-xs font-bold text-slate-500">Valuta (€)</label><input type="text" value={localSettings.currency} onChange={e=>setLocalSettings({...localSettings, currency: e.target.value})} className="w-full p-2 border rounded"/></div>
                             </div>
+                    </div>
+
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+                         <h4 className="font-bold text-slate-700 mb-4 flex items-center gap-2"><Percent size={18}/> Margini e Tasse</h4>
+                         <div className="space-y-3">
+                            <div><label className="text-xs font-bold text-slate-500">IVA Default (%)</label><input type="number" value={localSettings.vatRate} onChange={e=>setLocalSettings({...localSettings, vatRate: parseFloat(e.target.value)})} className="w-full p-2 border rounded"/></div>
+                            <div>
+                                <label className="text-xs font-bold text-slate-500">Ricarico Default (%)</label>
+                                <input type="number" value={localSettings.defaultMarkup || 100} onChange={e=>setLocalSettings({...localSettings, defaultMarkup: parseFloat(e.target.value)})} className="w-full p-2 border rounded"/>
+                                <p className="text-[10px] text-slate-400 mt-1">Applicato sui nuovi prodotti se non specificato diversamente.</p>
+                            </div>
+                         </div>
                     </div>
                 </div>
 

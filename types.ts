@@ -31,10 +31,20 @@ export interface Product {
   name: string;
   description?: string;
   category: string;
-  price: number;
+  
+  // Pricing & Economics
+  costPrice?: number; // Costo acquisto
+  markup?: number; // Ricarico %
+  price: number; // Prezzo vendita negozio (calcolato o manuale)
+  onlinePrice?: number; // Prezzo vendita online (opzionale)
+  
   imageUrl: string;
   material?: string;
-  weight?: number; // Nuovo campo opzionale (kg)
+  weight?: number;
+  
+  // Visibility
+  isOnline: boolean; // Visibile in vetrina
+  
   variants: ProductVariant[]; 
   supplierId?: string;
 }
@@ -112,10 +122,10 @@ export interface StoreSettings {
   logoUrl?: string;
   
   // Fiscal
-  companyName: string; // Ragione Sociale
-  vatNumber: string; // P.IVA
-  fiscalCode: string; // Codice Fiscale
-  sdiCode?: string; // Codice Univoco
+  companyName: string;
+  vatNumber: string;
+  fiscalCode: string;
+  sdiCode?: string;
   pec?: string;
   address: string;
   city: string;
@@ -132,6 +142,7 @@ export interface StoreSettings {
   
   // Config
   vatRate: number;
+  defaultMarkup: number; // Nuovo default ricarico %
   currency: string;
   
   // Hardware Integrations

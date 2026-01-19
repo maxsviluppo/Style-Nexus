@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Sale, Invoice, FinancialRecord, TransactionCategory, DetailedPaymentMethod } from '../types';
-import { TrendingUp, TrendingDown, PieChart, FileText, Plus, X, Calendar, Zap, Home, DollarSign, Briefcase, AlertCircle, CheckCircle, CalendarRange, ChevronDown, Filter } from 'lucide-react';
+import { TrendingUp, TrendingDown, PieChart, FileText, Plus, X, Calendar, Zap, Home, DollarSign, Briefcase, AlertCircle, CheckCircle, CalendarRange, ChevronDown, Filter, AlertTriangle } from 'lucide-react';
 
 interface AccountingProps {
     sales: Sale[];
@@ -93,6 +93,11 @@ const Accounting: React.FC<AccountingProps> = ({ sales, invoices, financialRecor
         .reduce((acc, t) => acc + t.amount, 0);
 
     const netProfit = totalRevenue - totalExpenses;
+
+    // 4. Global Debt Calculation (Unpaid Expenses from ALL history, not just filtered)
+    const totalDebt = rawTransactions
+        .filter(t => t.type === 'OUT' && !t.isPaid)
+        .reduce((acc, t) => acc + t.amount, 0);
 
     // Deadlines are independent of the view filter (always show upcoming)
     const deadlines = financialRecords
@@ -203,7 +208,7 @@ const Accounting: React.FC<AccountingProps> = ({ sales, invoices, financialRecor
             </div>
 
             {/* KPI Cards (Filtered) */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm flex items-center justify-between">
                         <div>
                             <p className="text-sm font-medium text-slate-500">Entrate ({dateRange.label})</p>
@@ -224,6 +229,16 @@ const Accounting: React.FC<AccountingProps> = ({ sales, invoices, financialRecor
                             <h3 className={`text-2xl font-bold mt-1 ${netProfit >= 0 ? 'text-indigo-600' : 'text-amber-600'}`}>€{netProfit.toFixed(2)}</h3>
                         </div>
                         <div className="p-3 bg-indigo-50 text-indigo-600 rounded-lg"><PieChart /></div>
+                </div>
+                
+                {/* Situation Debitoria Card */}
+                <div className="bg-amber-50 p-6 rounded-xl border border-amber-200 shadow-sm flex items-center justify-between relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-10 bg-white/20 rounded-full -mr-5 -mt-5"></div>
+                        <div className="relative z-10">
+                            <p className="text-xs font-bold text-amber-800 uppercase tracking-wider flex items-center gap-1"><AlertTriangle size={12}/> Situazione Debitoria</p>
+                            <h3 className="text-2xl font-bold text-red-600 mt-1">- €{totalDebt.toFixed(2)}</h3>
+                            <p className="text-xs text-amber-700 mt-1">Totale da saldare</p>
+                        </div>
                 </div>
             </div>
 

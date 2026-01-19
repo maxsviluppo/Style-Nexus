@@ -10,9 +10,12 @@ const Storefront: React.FC<StorefrontProps> = ({ products = [] }) => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [activeCategory, setActiveCategory] = useState('Tutte le categorie');
 
-  const filteredProducts = activeCategory === 'Tutte le categorie' 
-    ? products 
-    : products.filter(p => p.category === activeCategory);
+  // Filter Logic: Category + Visibility (isOnline)
+  const filteredProducts = products.filter(p => {
+      const matchCat = activeCategory === 'Tutte le categorie' || p.category === activeCategory;
+      const isVisible = p.isOnline !== false; // Default true if undefined
+      return matchCat && isVisible;
+  });
 
   return (
     <div className="space-y-6">
@@ -39,6 +42,9 @@ const Storefront: React.FC<StorefrontProps> = ({ products = [] }) => {
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {filteredProducts.map((product) => {
           const totalStock = product.variants.reduce((acc, v) => acc + v.stock, 0);
+          // Use Online Price if available, otherwise Store Price
+          const displayPrice = product.onlinePrice || product.price;
+
           return (
             <div key={product.id} className="group bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-all cursor-pointer" onClick={() => setSelectedProduct(product)}>
               <div className="relative aspect-[3/4] bg-slate-200 overflow-hidden">
@@ -65,11 +71,14 @@ const Storefront: React.FC<StorefrontProps> = ({ products = [] }) => {
               <div className="p-4">
                 <h3 className="font-semibold text-slate-800 truncate">{product.name}</h3>
                 <div className="flex justify-between items-center mt-2">
-                  <span className="text-lg font-bold text-indigo-600">€{product.price.toFixed(2)}</span>
+                  <span className="text-lg font-bold text-indigo-600">€{displayPrice.toFixed(2)}</span>
                   <button className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors">
                     <ShoppingCart size={18} />
                   </button>
                 </div>
+                {product.onlinePrice && product.onlinePrice !== product.price && (
+                    <div className="text-[10px] text-slate-400 line-through mt-1">Negozio: €{product.price.toFixed(2)}</div>
+                )}
               </div>
             </div>
           );
@@ -93,7 +102,7 @@ const Storefront: React.FC<StorefrontProps> = ({ products = [] }) => {
                     <button onClick={() => setSelectedProduct(null)} className="text-slate-400 hover:text-slate-600 hidden md:block"><X size={28}/></button>
                  </div>
                  
-                 <div className="text-2xl font-bold text-slate-800 mb-6">€{selectedProduct.price.toFixed(2)}</div>
+                 <div className="text-2xl font-bold text-slate-800 mb-6">€{(selectedProduct.onlinePrice || selectedProduct.price).toFixed(2)}</div>
                  
                  <div className="prose prose-slate text-sm text-slate-600 mb-8">
                     <p>{selectedProduct.description || "Nessuna descrizione disponibile."}</p>

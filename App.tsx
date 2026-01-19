@@ -35,6 +35,7 @@ const initialProducts: Product[] = [
     price: 129.99, 
     imageUrl: 'https://picsum.photos/400/500?random=1',
     material: '100% Lana Merino',
+    isOnline: true,
     variants: [
       { id: 'v1', size: 'M', color: 'Nero', stock: 5, barcode: '8001001' },
       { id: 'v2', size: 'L', color: 'Nero', stock: 8, barcode: '8001002' },
@@ -47,6 +48,7 @@ const initialProducts: Product[] = [
     price: 59.99, 
     imageUrl: 'https://picsum.photos/400/500?random=2',
     material: 'Cotone',
+    isOnline: true,
     variants: [
       { id: 'v4', size: 'S', color: 'Blu', stock: 15, barcode: '8002001' }
     ]
@@ -64,6 +66,7 @@ const initialSettings: StoreSettings = {
     email: 'amministrazione@stylenexus.it',
     phone: '+39 02 1234567',
     vatRate: 22,
+    defaultMarkup: 40,
     currency: '€',
     integrations: {
       printerIp: '192.168.1.100',

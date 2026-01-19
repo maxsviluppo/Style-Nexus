@@ -48,6 +48,30 @@ export const generateProductDescription = async (product: any): Promise<string> 
   }
 };
 
+export const suggestProductPricing = async (productName: string, category: string, costPrice: number): Promise<{ markup: number, reasoning: string }> => {
+  if (!ai) return { markup: 40, reasoning: "API Key mancante." };
+  try {
+    const prompt = `Agisci come un esperto di pricing retail moda.
+    Prodotto: ${productName}
+    Categoria: ${category}
+    Costo Acquisto: €${costPrice}
+    
+    Suggerisci una percentuale di ricarico (Markup %) ottimale considerando i trend attuali e la categoria.
+    Restituisci JSON puro: { "markup": number, "reasoning": "breve spiegazione in italiano" }`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: prompt
+    });
+    
+    const text = response.text || "{}";
+    const jsonString = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    return JSON.parse(jsonString);
+  } catch (error) {
+    return { markup: 100, reasoning: "Fallback standard." };
+  }
+};
+
 export const analyzeProductImage = async (base64Image: string): Promise<any> => {
   if (!ai) throw new Error("API Key mancante");
   try {

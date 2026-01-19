@@ -1,11 +1,11 @@
-import React, { useState, useRef } from 'react';
-import { Product, ProductVariant } from '../types';
+import React, { useState, useRef, useEffect } from 'react';
+import { Product, ProductVariant, StoreSettings } from '../types';
 import { 
   Plus, Search, Edit2, Trash2, X, Save, Package, 
   Upload, ScanLine, Loader2, ArrowUpCircle, ArrowDownCircle,
-  Grid3X3, Wand2, Sparkles, Scale
+  Grid3X3, Wand2, Sparkles, Scale, Eye, EyeOff, Calculator, DollarSign
 } from 'lucide-react';
-import { analyzeProductImage, generateProductDescription } from '../services/geminiService';
+import { analyzeProductImage, generateProductDescription, suggestProductPricing } from '../services/geminiService';
 
 interface ProductsProps {
   products: Product[];
@@ -21,6 +21,7 @@ const Products: React.FC<ProductsProps> = ({ products, setProducts }) => {
   const [matrixSizes, setMatrixSizes] = useState('');
   const [matrixColors, setMatrixColors] = useState('');
   const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
+  const [isSuggestingPrice, setIsSuggestingPrice] = useState(false);
   
   // Filter States
   const [searchTerm, setSearchTerm] = useState('');
@@ -44,6 +45,48 @@ const Products: React.FC<ProductsProps> = ({ products, setProducts }) => {
   // --- Helpers ---
   const calculateTotalStock = (p: Product) => p.variants?.reduce((acc, v) => acc + v.stock, 0) || 0;
 
+  // --- Mock settings retrieval (In real app, pass settings as props) ---
+  const defaultSettings: StoreSettings = {
+      vatRate: 22,
+      defaultMarkup: 100, // 100% markup
+      currency: '€',
+      storeName: '', companyName: '', vatNumber: '', fiscalCode: '', address: '', city: '', zip: '', email: '', phone: '',
+      integrations: { printerIp: '', printerBrand: 'NONE', printerEnabled: false, sumUpEmail: '', sumUpEnabled: false }
+  };
+
+  // --- Pricing Logic ---
+  const updatePricing = (field: 'costPrice' | 'markup' | 'price' | 'onlinePrice', value: number) => {
+      const vat = defaultSettings.vatRate / 100;
+      let newData = { ...currentProduct, [field]: value };
+
+      if (field === 'costPrice') {
+          // If cost changes, recalculate sales price based on current markup
+          const markup = currentProduct.markup || defaultSettings.defaultMarkup;
+          const netPrice = value + (value * (markup / 100));
+          const finalPrice = netPrice * (1 + vat);
+          newData.price = parseFloat(finalPrice.toFixed(2));
+          // If online price wasn't set manually, sync it
+          if (!currentProduct.onlinePrice) newData.onlinePrice = newData.price;
+      } else if (field === 'markup') {
+          // If markup changes, recalculate price
+          const cost = currentProduct.costPrice || 0;
+          const netPrice = cost + (cost * (value / 100));
+          const finalPrice = netPrice * (1 + vat);
+          newData.price = parseFloat(finalPrice.toFixed(2));
+      } else if (field === 'price') {
+          // If final price is manually set, reverse calc markup (approx)
+          const cost = currentProduct.costPrice || 0;
+          if (cost > 0) {
+              const netPrice = value / (1 + vat);
+              const margin = netPrice - cost;
+              const newMarkup = (margin / cost) * 100;
+              newData.markup = parseFloat(newMarkup.toFixed(1));
+          }
+      }
+
+      setCurrentProduct(newData);
+  };
+
   // --- AI Description Generator ---
   const handleGenerateDescription = async () => {
     if (!currentProduct.name) {
@@ -58,6 +101,22 @@ const Products: React.FC<ProductsProps> = ({ products, setProducts }) => {
     setIsGeneratingDesc(false);
   };
 
+  const handleSuggestPrice = async () => {
+     if (!currentProduct.name || !currentProduct.category || !currentProduct.costPrice) {
+         alert("Inserisci Nome, Categoria e Costo d'acquisto per calcolare il ricarico.");
+         return;
+     }
+     setIsSuggestingPrice(true);
+     const result = await suggestProductPricing(currentProduct.name, currentProduct.category, currentProduct.costPrice);
+     setIsSuggestingPrice(false);
+     
+     if (result.markup) {
+         if (window.confirm(`L'AI suggerisce un ricarico del ${result.markup}%.\nMotivazione: ${result.reasoning}\n\nApplicare?`)) {
+             updatePricing('markup', result.markup);
+         }
+     }
+  };
+
   // --- CRUD Handlers ---
   const handleOpenModal = (product?: Product) => {
     if (product) {
@@ -66,7 +125,11 @@ const Products: React.FC<ProductsProps> = ({ products, setProducts }) => {
       setCurrentProduct({
         name: '',
         category: 'Uomo',
+        costPrice: 0,
+        markup: defaultSettings.defaultMarkup,
         price: 0,
+        onlinePrice: 0,
+        isOnline: true,
         imageUrl: 'https://picsum.photos/400/500?random=' + Math.floor(Math.random() * 1000),
         material: '',
         weight: 0,
@@ -98,6 +161,11 @@ const Products: React.FC<ProductsProps> = ({ products, setProducts }) => {
     if (window.confirm('Eliminare prodotto e tutte le varianti?')) {
       setProducts(products.filter(p => p.id !== id));
     }
+  };
+
+  const toggleVisibility = (product: Product) => {
+      const updated = { ...product, isOnline: !product.isOnline };
+      setProducts(products.map(p => p.id === product.id ? updated : p));
   };
 
   // --- Matrix Generator Logic ---
@@ -179,7 +247,10 @@ const Products: React.FC<ProductsProps> = ({ products, setProducts }) => {
             name: analysis.name || 'Prodotto Importato',
             description: analysis.description || '',
             category: analysis.category || 'Accessori',
+            costPrice: 0,
+            markup: 100,
             price: 0,
+            isOnline: true,
             imageUrl: URL.createObjectURL(file),
             material: analysis.material || '',
             variants: suggestedVariants
@@ -271,17 +342,25 @@ const Products: React.FC<ProductsProps> = ({ products, setProducts }) => {
       <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
         <table className="w-full text-left">
           <thead className="bg-slate-50 border-b border-slate-200">
-            <tr><th className="p-4 text-sm text-slate-600">Prodotto</th><th className="p-4 text-sm text-slate-600">Varianti</th><th className="p-4 text-sm text-slate-600">Stock Totale</th><th className="p-4 text-right text-sm text-slate-600">Azioni</th></tr>
+            <tr><th className="p-4 text-sm text-slate-600">Prodotto</th><th className="p-4 text-sm text-slate-600">Prezzi (Negozio/Web)</th><th className="p-4 text-sm text-slate-600">Stock Totale</th><th className="p-4 text-center text-sm text-slate-600">Vetrina</th><th className="p-4 text-right text-sm text-slate-600">Azioni</th></tr>
           </thead>
           <tbody>
             {filteredProducts.map((p) => (
               <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50">
                 <td className="p-4 flex items-center gap-3">
                   <img src={p.imageUrl} className="w-10 h-12 object-cover rounded bg-slate-200" alt="" />
-                  <div><div className="font-medium">{p.name}</div><div className="text-xs text-slate-500">{p.category}</div></div>
+                  <div><div className="font-medium">{p.name}</div><div className="text-xs text-slate-500">{p.category} | {p.variants.length} var.</div></div>
                 </td>
-                <td className="p-4 text-xs text-slate-500">{p.variants.length} Varianti</td>
+                <td className="p-4 text-sm">
+                    <div className="font-bold">€{p.price.toFixed(2)}</div>
+                    {p.onlinePrice && p.onlinePrice !== p.price && <div className="text-xs text-indigo-600">Online: €{p.onlinePrice.toFixed(2)}</div>}
+                </td>
                 <td className="p-4 font-bold">{calculateTotalStock(p)}</td>
+                <td className="p-4 text-center">
+                    <button onClick={() => toggleVisibility(p)} className={`p-2 rounded-full transition ${p.isOnline ? 'text-green-600 bg-green-50' : 'text-slate-400 bg-slate-100'}`}>
+                        {p.isOnline ? <Eye size={18}/> : <EyeOff size={18}/>}
+                    </button>
+                </td>
                 <td className="p-4 text-right flex justify-end gap-2">
                   <button onClick={() => handleOpenModal(p)} className="p-2 text-indigo-600 hover:bg-indigo-50 rounded"><Edit2 size={16}/></button>
                   <button onClick={() => handleDelete(p.id)} className="p-2 text-red-600 hover:bg-red-50 rounded"><Trash2 size={16}/></button>
@@ -294,7 +373,7 @@ const Products: React.FC<ProductsProps> = ({ products, setProducts }) => {
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col animate-in fade-in zoom-in duration-200">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-5xl max-h-[90vh] flex flex-col animate-in fade-in zoom-in duration-200">
             <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-2xl">
               <h3 className="text-xl font-bold text-slate-800">{currentProduct.id ? 'Modifica' : 'Nuovo'} Prodotto</h3>
               <button onClick={() => setIsModalOpen(false)} className="text-slate-400"><X size={24} /></button>
@@ -302,34 +381,73 @@ const Products: React.FC<ProductsProps> = ({ products, setProducts }) => {
             
             <div className="flex-1 overflow-y-auto p-6 space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                 {/* Left Column: Image */}
                  <div className="md:col-span-1">
-                    <img src={currentProduct.imageUrl} className="w-full aspect-[3/4] object-cover rounded-xl border border-slate-200" />
-                 </div>
-                 <div className="md:col-span-2 space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="col-span-2">
-                        <label className="text-xs font-bold text-slate-500">Nome</label>
-                        <input type="text" value={currentProduct.name} onChange={e => setCurrentProduct({...currentProduct, name: e.target.value})} className="w-full p-2 border border-slate-200 rounded-lg" />
-                      </div>
-                      <div>
-                        <label className="text-xs font-bold text-slate-500">Cat</label>
-                        <select value={currentProduct.category} onChange={e => setCurrentProduct({...currentProduct, category: e.target.value})} className="w-full p-2 border border-slate-200 rounded-lg bg-white">
-                          <option>Uomo</option><option>Donna</option><option>Bambino</option><option>Accessori</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-xs font-bold text-slate-500">Materiale</label>
-                        <input type="text" value={currentProduct.material || ''} onChange={e => setCurrentProduct({...currentProduct, material: e.target.value})} className="w-full p-2 border border-slate-200 rounded-lg" />
-                      </div>
-                      <div>
-                        <label className="text-xs font-bold text-slate-500">Prezzo (€)</label>
-                        <input type="number" step="0.01" value={currentProduct.price} onChange={e => setCurrentProduct({...currentProduct, price: parseFloat(e.target.value)})} className="w-full p-2 border border-slate-200 rounded-lg" />
-                      </div>
-                      <div>
-                        <label className="text-xs font-bold text-slate-500 flex items-center gap-1"><Scale size={12}/> Peso (kg)</label>
-                        <input type="number" step="0.01" value={currentProduct.weight || ''} onChange={e => setCurrentProduct({...currentProduct, weight: parseFloat(e.target.value)})} className="w-full p-2 border border-slate-200 rounded-lg" placeholder="Opzionale" />
-                      </div>
+                    <img src={currentProduct.imageUrl} className="w-full aspect-[3/4] object-cover rounded-xl border border-slate-200 mb-2" />
+                    <div className="flex justify-between items-center p-3 bg-slate-50 rounded-lg border border-slate-200">
+                        <span className="text-xs font-bold text-slate-600">Visibile in Vetrina?</span>
+                        <div className={`w-12 h-6 rounded-full p-1 cursor-pointer transition-colors ${currentProduct.isOnline ? 'bg-green-500' : 'bg-slate-300'}`} onClick={() => setCurrentProduct({...currentProduct, isOnline: !currentProduct.isOnline})}>
+                            <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${currentProduct.isOnline ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                        </div>
                     </div>
+                 </div>
+
+                 {/* Center & Right: Details */}
+                 <div className="md:col-span-2 space-y-6">
+                    {/* Basic Info */}
+                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <h4 className="font-bold text-slate-700 mb-3 flex items-center gap-2"><Package size={16}/> Anagrafica Base</h4>
+                        <div className="grid grid-cols-2 gap-4">
+                        <div className="col-span-2">
+                            <label className="text-xs font-bold text-slate-500">Nome Prodotto</label>
+                            <input type="text" value={currentProduct.name} onChange={e => setCurrentProduct({...currentProduct, name: e.target.value})} className="w-full p-2 border border-slate-200 rounded-lg" />
+                        </div>
+                        <div>
+                            <label className="text-xs font-bold text-slate-500">Categoria</label>
+                            <select value={currentProduct.category} onChange={e => setCurrentProduct({...currentProduct, category: e.target.value})} className="w-full p-2 border border-slate-200 rounded-lg bg-white">
+                            <option>Uomo</option><option>Donna</option><option>Bambino</option><option>Accessori</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="text-xs font-bold text-slate-500">Materiale</label>
+                            <input type="text" value={currentProduct.material || ''} onChange={e => setCurrentProduct({...currentProduct, material: e.target.value})} className="w-full p-2 border border-slate-200 rounded-lg" />
+                        </div>
+                        </div>
+                    </div>
+
+                    {/* Pricing Engine */}
+                    <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+                        <div className="flex justify-between items-center mb-3">
+                            <h4 className="font-bold text-indigo-900 flex items-center gap-2"><Calculator size={16}/> Pricing Engine & Ricarico</h4>
+                            <button onClick={handleSuggestPrice} disabled={isSuggestingPrice} className="text-xs bg-white text-indigo-600 border border-indigo-200 px-3 py-1 rounded-full font-bold hover:bg-indigo-600 hover:text-white transition flex items-center gap-1">
+                                {isSuggestingPrice ? <Loader2 size={12} className="animate-spin"/> : <Sparkles size={12}/>} AI Advisor
+                            </button>
+                        </div>
+                        
+                        <div className="grid grid-cols-4 gap-4 items-end">
+                            <div>
+                                <label className="text-xs font-bold text-slate-500 mb-1 block">Costo Acquisto (€)</label>
+                                <input type="number" step="0.01" value={currentProduct.costPrice || ''} onChange={e => updatePricing('costPrice', parseFloat(e.target.value))} className="w-full p-2 border border-slate-200 rounded-lg" placeholder="0.00"/>
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-slate-500 mb-1 block text-indigo-600">Markup (%)</label>
+                                <input type="number" step="1" value={currentProduct.markup || 0} onChange={e => updatePricing('markup', parseFloat(e.target.value))} className="w-full p-2 border border-indigo-200 rounded-lg text-indigo-700 font-bold bg-white" />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-slate-500 mb-1 block">Listino Negozio (€)</label>
+                                <input type="number" step="0.01" value={currentProduct.price || 0} onChange={e => updatePricing('price', parseFloat(e.target.value))} className="w-full p-2 border border-slate-200 rounded-lg font-bold text-lg" />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-slate-500 mb-1 block">Listino Online (€)</label>
+                                <input type="number" step="0.01" value={currentProduct.onlinePrice || 0} onChange={e => updatePricing('onlinePrice', parseFloat(e.target.value))} className="w-full p-2 border border-slate-200 rounded-lg" placeholder="Opzionale"/>
+                            </div>
+                        </div>
+                        <div className="mt-2 text-xs text-indigo-800 flex gap-4">
+                            <span>IVA Calcolata: {defaultSettings.vatRate}%</span>
+                            <span>Margine Netto: €{((currentProduct.price || 0) / (1 + defaultSettings.vatRate/100) - (currentProduct.costPrice || 0)).toFixed(2)}</span>
+                        </div>
+                    </div>
+
                     <div>
                         <div className="flex justify-between items-center mb-1">
                           <label className="text-xs font-bold text-slate-500">Descrizione</label>
@@ -347,12 +465,13 @@ const Products: React.FC<ProductsProps> = ({ products, setProducts }) => {
                  </div>
               </div>
 
-              <div className="bg-indigo-50 p-6 rounded-xl border border-indigo-100">
-                <h4 className="font-bold text-indigo-900 flex items-center gap-2 mb-4"><Grid3X3 size={20} /> Generatore Matrice Varianti</h4>
+              {/* Matrix Generator */}
+              <div className="bg-slate-50 p-6 rounded-xl border border-slate-200">
+                <h4 className="font-bold text-slate-700 flex items-center gap-2 mb-4"><Grid3X3 size={20} /> Generatore Matrice Varianti</h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                   <input type="text" placeholder="Taglie (S, M, L)" value={matrixSizes} onChange={e => setMatrixSizes(e.target.value)} className="w-full p-2 border border-indigo-200 rounded-lg" />
-                   <input type="text" placeholder="Colori (Rosso, Blu)" value={matrixColors} onChange={e => setMatrixColors(e.target.value)} className="w-full p-2 border border-indigo-200 rounded-lg" />
-                   <button onClick={generateVariants} className="bg-indigo-600 text-white p-2 rounded-lg font-bold">Genera Combinazioni</button>
+                   <input type="text" placeholder="Taglie (S, M, L)" value={matrixSizes} onChange={e => setMatrixSizes(e.target.value)} className="w-full p-2 border border-slate-300 rounded-lg bg-white" />
+                   <input type="text" placeholder="Colori (Rosso, Blu)" value={matrixColors} onChange={e => setMatrixColors(e.target.value)} className="w-full p-2 border border-slate-300 rounded-lg bg-white" />
+                   <button onClick={generateVariants} className="bg-slate-800 text-white p-2 rounded-lg font-bold hover:bg-slate-700">Genera Combinazioni</button>
                 </div>
               </div>
 
