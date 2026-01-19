@@ -1,0 +1,138 @@
+import React, { useState } from 'react';
+import { 
+  LayoutDashboard, 
+  ShoppingBag, 
+  Layers, 
+  Store, 
+  Megaphone, 
+  Settings,
+  Menu,
+  X,
+  LogOut
+} from 'lucide-react';
+import { View } from './types';
+import Dashboard from './components/Dashboard';
+import Categories from './components/Categories';
+import Marketing from './components/Marketing';
+import Storefront from './components/Storefront';
+import Products from './components/Products';
+
+const App: React.FC = () => {
+  const [currentView, setCurrentView] = useState<View>(View.DASHBOARD);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const renderView = () => {
+    switch (currentView) {
+      case View.DASHBOARD:
+        return <Dashboard />;
+      case View.PRODUCTS:
+        return <Products />;
+      case View.CATEGORIES:
+        return <Categories />;
+      case View.MARKETING:
+        return <Marketing />;
+      case View.STOREFRONT:
+        return <Storefront />;
+      default:
+        return (
+          <div className="flex items-center justify-center h-96 text-slate-400 flex-col gap-4">
+            <Settings size={48} />
+            <p>Questa sezione è in fase di sviluppo</p>
+          </div>
+        );
+    }
+  };
+
+  const NavItem = ({ view, icon: Icon, label }: { view: View, icon: any, label: string }) => (
+    <button
+      onClick={() => {
+        setCurrentView(view);
+        setIsMobileMenuOpen(false);
+      }}
+      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+        currentView === view 
+          ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' 
+          : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
+      }`}
+    >
+      <Icon size={20} />
+      <span className="font-medium">{label}</span>
+    </button>
+  );
+
+  return (
+    <div className="flex h-screen bg-slate-50 overflow-hidden">
+      {/* Sidebar - Desktop */}
+      <aside className="hidden md:flex flex-col w-64 bg-white border-r border-slate-200 h-full">
+        <div className="p-6 border-b border-slate-100">
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+            StyleNexus
+          </h1>
+          <p className="text-xs text-slate-400 mt-1">Retail Management v1.0</p>
+        </div>
+        
+        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+          <NavItem view={View.DASHBOARD} icon={LayoutDashboard} label="Dashboard" />
+          <NavItem view={View.PRODUCTS} icon={ShoppingBag} label="Prodotti" />
+          <NavItem view={View.CATEGORIES} icon={Layers} label="Categorie" />
+          <NavItem view={View.STOREFRONT} icon={Store} label="Vetrina" />
+          <NavItem view={View.MARKETING} icon={Megaphone} label="Marketing AI" />
+          <NavItem view={View.ADMIN} icon={Settings} label="Amministrazione" />
+        </nav>
+
+        <div className="p-4 border-t border-slate-100">
+          <button className="flex items-center gap-3 px-4 py-3 w-full text-slate-500 hover:text-red-600 transition-colors">
+            <LogOut size={20} />
+            <span className="font-medium">Esci</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* Mobile Sidebar Overlay */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-40 bg-black/50 md:hidden" onClick={() => setIsMobileMenuOpen(false)}>
+          <div 
+            className="absolute top-0 left-0 w-64 h-full bg-white shadow-xl flex flex-col"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+              <h1 className="text-xl font-bold text-indigo-600">StyleNexus</h1>
+              <button onClick={() => setIsMobileMenuOpen(false)} className="text-slate-400">
+                <X size={24} />
+              </button>
+            </div>
+            <nav className="flex-1 p-4 space-y-2">
+              <NavItem view={View.DASHBOARD} icon={LayoutDashboard} label="Dashboard" />
+              <NavItem view={View.PRODUCTS} icon={ShoppingBag} label="Prodotti" />
+              <NavItem view={View.CATEGORIES} icon={Layers} label="Categorie" />
+              <NavItem view={View.STOREFRONT} icon={Store} label="Vetrina" />
+              <NavItem view={View.MARKETING} icon={Megaphone} label="Marketing AI" />
+              <NavItem view={View.ADMIN} icon={Settings} label="Amministrazione" />
+            </nav>
+          </div>
+        </div>
+      )}
+
+      {/* Main Content Area */}
+      <main className="flex-1 flex flex-col h-full overflow-hidden">
+        {/* Mobile Header */}
+        <header className="md:hidden bg-white border-b border-slate-200 p-4 flex items-center justify-between">
+          <button onClick={() => setIsMobileMenuOpen(true)} className="text-slate-600">
+            <Menu size={24} />
+          </button>
+          <span className="font-bold text-slate-800">StyleNexus</span>
+          <div className="w-6" /> {/* Spacer for centering */}
+        </header>
+
+        {/* Content Scroll Area */}
+        <div className="flex-1 overflow-y-auto p-4 md:p-8">
+          <div className="max-w-7xl mx-auto">
+            {renderView()}
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+};
+
+export default App;
