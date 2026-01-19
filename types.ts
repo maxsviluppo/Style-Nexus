@@ -84,6 +84,7 @@ export interface Sale {
 }
 
 export type TransactionCategory = 'RENT' | 'UTILITIES' | 'TAXES' | 'SALARY' | 'OTHER_EXPENSE' | 'OTHER_INCOME' | 'GRANT';
+export type DetailedPaymentMethod = 'CASH' | 'CREDIT_CARD' | 'DEBIT_CARD' | 'BANK_TRANSFER' | 'PAYPAL' | 'CHECK' | 'RIBA';
 
 export interface FinancialRecord {
   id: string;
@@ -94,6 +95,15 @@ export interface FinancialRecord {
   description: string;
   dueDate?: string; // Per le scadenze
   isPaid: boolean;
+  paymentMethod?: DetailedPaymentMethod; // Nuovo campo dettagliato
+}
+
+export interface HardwareConfig {
+  printerIp: string;
+  printerBrand: 'EPSON' | 'CUSTOM' | 'RCH' | 'NONE';
+  printerEnabled: boolean;
+  sumUpEmail: string;
+  sumUpEnabled: boolean;
 }
 
 export interface StoreSettings {
@@ -123,6 +133,9 @@ export interface StoreSettings {
   // Config
   vatRate: number;
   currency: string;
+  
+  // Hardware Integrations
+  integrations: HardwareConfig;
 }
 
 export interface StatData {

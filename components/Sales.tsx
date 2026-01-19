@@ -1,15 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Product, ProductVariant, Sale, SaleItem } from '../types';
-import { Search, ShoppingCart, Trash2, CreditCard, Banknote, Package, ScanLine, X, Wifi, Smartphone, Loader2, CheckCircle2 } from 'lucide-react';
+import { Product, ProductVariant, Sale, SaleItem, StoreSettings } from '../types';
+import { Search, ShoppingCart, Trash2, CreditCard, Banknote, Package, ScanLine, X, Wifi, Smartphone, Loader2, CheckCircle2, AlertTriangle, Printer } from 'lucide-react';
+import { printFiscalReceipt, initSumUpPayment } from '../services/hardwareService';
 
 interface SalesProps {
     products: Product[];
     setProducts: React.Dispatch<React.SetStateAction<Product[]>>;
     sales: Sale[];
     setSales: React.Dispatch<React.SetStateAction<Sale[]>>;
+    settings: StoreSettings;
 }
 
-const Sales: React.FC<SalesProps> = ({ products, setProducts, sales, setSales }) => {
+const Sales: React.FC<SalesProps> = ({ products, setProducts, sales, setSales, settings }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [cart, setCart] = useState<SaleItem[]>([]);
     const [activeCategory, setActiveCategory] = useState('Tutte');
@@ -19,18 +21,16 @@ const Sales: React.FC<SalesProps> = ({ products, setProducts, sales, setSales })
     const [scannedCode, setScannedCode] = useState('');
     const scannerInputRef = useRef<HTMLInputElement>(null);
 
-    // SumUp Simulation State
-    const [sumUpState, setSumUpState] = useState<'IDLE' | 'CONNECTING' | 'WAITING_CARD' | 'PROCESSING' | 'SUCCESS'>('IDLE');
+    // Hardware States
+    const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+    const [statusMessage, setStatusMessage] = useState('');
 
     // --- Categoy Filter ---
     const categories = ['Tutte', ...Array.from(new Set(products.map(p => p.category)))];
 
     // --- Cart Logic ---
     const addToCart = (product: Product, variant: ProductVariant) => {
-        if (variant.stock <= 0) {
-            // Audio feedback error could go here
-            return;
-        }
+        if (variant.stock <= 0) return;
 
         const existingItem = cart.find(item => item.variantId === variant.id);
         
@@ -66,7 +66,7 @@ const Sales: React.FC<SalesProps> = ({ products, setProducts, sales, setSales })
             if (v) {
                 addToCart(p, v);
                 found = true;
-                setScannedCode(''); // Reset for next scan
+                setScannedCode(''); 
                 break;
             }
         }
@@ -76,8 +76,30 @@ const Sales: React.FC<SalesProps> = ({ products, setProducts, sales, setSales })
         }
     };
 
-    // --- Payment Logic ---
-    const processSale = (method: 'CASH' | 'CARD' | 'SUMUP') => {
+    // --- Payment Logic & Hardware ---
+    const processSale = async (method: 'CASH' | 'CARD' | 'SUMUP') => {
+        if (cart.length === 0) return;
+
+        // SUMUP Integration Logic
+        if (method === 'SUMUP') {
+            if (!settings.integrations.sumUpEnabled || !settings.integrations.sumUpEmail) {
+                alert("Errore: SumUp non configurato nelle impostazioni.");
+                return;
+            }
+            setIsProcessingPayment(true);
+            setStatusMessage("In attesa del terminale SumUp...");
+            
+            const sumUpResult = await initSumUpPayment(cartTotal, settings.integrations.sumUpEmail);
+            
+            if (!sumUpResult.success) {
+                alert(sumUpResult.message);
+                setIsProcessingPayment(false);
+                setStatusMessage('');
+                return;
+            }
+        }
+
+        // Finalize Sale Record
         const total = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
         const newSale: Sale = {
             id: Date.now().toString(),
@@ -87,7 +109,17 @@ const Sales: React.FC<SalesProps> = ({ products, setProducts, sales, setSales })
             paymentMethod: method
         };
 
-        // Reduce Stock
+        // Fiscal Printer Logic
+        if (settings.integrations.printerEnabled && settings.integrations.printerIp) {
+            setStatusMessage("Stampa Scontrino Fiscale in corso...");
+            setIsProcessingPayment(true); // Keep loading UI
+            const printResult = await printFiscalReceipt(newSale, settings.integrations.printerIp, settings.integrations.printerBrand);
+            if (!printResult.success) {
+                alert(`ATTENZIONE: ${printResult.message}. La vendita è stata comunque salvata.`);
+            }
+        }
+
+        // Update Stock
         const updatedProducts = products.map(p => {
             const productInCart = cart.filter(item => item.productId === p.id);
             if (productInCart.length > 0) {
@@ -106,30 +138,11 @@ const Sales: React.FC<SalesProps> = ({ products, setProducts, sales, setSales })
         setProducts(updatedProducts);
         setSales([...sales, newSale]);
         setCart([]);
-        if (method !== 'SUMUP') alert("Vendita registrata!");
-    };
-
-    // --- SumUp Flow ---
-    const startSumUpTransaction = async () => {
-        if (cart.length === 0) return;
-        setSumUpState('CONNECTING');
+        setIsProcessingPayment(false);
+        setStatusMessage('');
         
-        // Simulating API Connection to Terminal
-        setTimeout(() => {
-            setSumUpState('WAITING_CARD');
-            // Simulating User Tapping Card
-            setTimeout(() => {
-                setSumUpState('PROCESSING');
-                // Simulating Bank Authorization
-                setTimeout(() => {
-                    setSumUpState('SUCCESS');
-                    setTimeout(() => {
-                        processSale('SUMUP');
-                        setSumUpState('IDLE');
-                    }, 1500);
-                }, 2000);
-            }, 3000);
-        }, 1500);
+        if (method === 'CASH') alert("Vendita Registrata (Contanti)");
+        if (method === 'SUMUP') alert("Transazione Eseguita & Vendita Registrata");
     };
 
     const filteredProducts = products.filter(p => {
@@ -183,7 +196,7 @@ const Sales: React.FC<SalesProps> = ({ products, setProducts, sales, setSales })
                     ))}
                 </div>
 
-                {/* Products Grid */}
+                {/* Products Grid - Showing ALL items neatly */}
                 <div className="flex-1 overflow-y-auto grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 content-start pr-2">
                     {filteredProducts.map(p => (
                         <div key={p.id} className="bg-white p-3 rounded-2xl border border-slate-200 hover:shadow-lg hover:border-indigo-300 transition-all cursor-pointer flex flex-col h-fit group">
@@ -196,16 +209,17 @@ const Sales: React.FC<SalesProps> = ({ products, setProducts, sales, setSales })
                             <div className="font-bold text-slate-800 text-sm leading-tight mb-1">{p.name}</div>
                             <div className="text-indigo-600 font-extrabold text-lg mb-3">€{p.price.toFixed(2)}</div>
                             
-                            {/* Variants - Quick Add */}
-                            <div className="flex flex-wrap gap-2 mt-auto">
+                            {/* Variants - Quick Add Grid */}
+                            <div className="flex flex-wrap gap-1 mt-auto">
                                 {p.variants.map(v => (
                                     <button 
                                         key={v.id} 
                                         onClick={() => addToCart(p, v)}
                                         disabled={v.stock === 0}
-                                        className={`flex-1 text-xs py-2 rounded-lg font-bold border transition-colors ${v.stock > 0 ? 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-indigo-600 hover:text-white hover:border-indigo-600' : 'bg-slate-100 text-slate-300 border-slate-100 cursor-not-allowed'}`}
+                                        className={`flex-1 min-w-[30%] text-[10px] py-1.5 px-1 rounded-md font-bold border transition-colors ${v.stock > 0 ? 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-indigo-600 hover:text-white hover:border-indigo-600' : 'bg-slate-100 text-slate-300 border-slate-100 cursor-not-allowed'}`}
+                                        title={`Stock: ${v.stock}`}
                                     >
-                                        {v.size}
+                                        {v.size} {v.stock<=2 && v.stock>0 && '⚠️'}
                                     </button>
                                 ))}
                             </div>
@@ -215,7 +229,17 @@ const Sales: React.FC<SalesProps> = ({ products, setProducts, sales, setSales })
             </div>
 
             {/* --- RIGHT: VIRTUAL RECEIPT --- */}
-            <div className="w-[400px] bg-white rounded-2xl shadow-xl border border-slate-200 flex flex-col overflow-hidden">
+            <div className="w-[400px] bg-white rounded-2xl shadow-xl border border-slate-200 flex flex-col overflow-hidden relative">
+                
+                {/* Fiscal Printer Status Indicator */}
+                {settings.integrations.printerEnabled && (
+                    <div className="absolute top-0 right-0 m-2 z-10">
+                        <div className="bg-green-100 text-green-700 px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1 border border-green-200">
+                            <Printer size={10} /> RT {settings.integrations.printerBrand} ONLINE
+                        </div>
+                    </div>
+                )}
+
                 <div className="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
                     <div className="font-bold text-lg text-slate-800 flex items-center gap-2">
                         <ShoppingCart className="text-indigo-600" /> Scontrino
@@ -256,21 +280,29 @@ const Sales: React.FC<SalesProps> = ({ products, setProducts, sales, setSales })
                     </div>
                     
                     <div className="grid grid-cols-2 gap-3 h-28">
+                        {/* Cash Button - Always Visible */}
                         <button 
                             onClick={() => processSale('CASH')} 
-                            disabled={cart.length===0} 
-                            className="bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-white rounded-xl font-bold flex flex-col items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-emerald-200 shadow-lg"
+                            disabled={cart.length===0 || isProcessingPayment} 
+                            className={`bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-white rounded-xl font-bold flex flex-col items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-emerald-200 shadow-lg ${!settings.integrations.sumUpEnabled ? 'col-span-2' : ''}`}
                         >
                             <Banknote size={28} /> CONTANTI
                         </button>
-                        <button 
-                            onClick={startSumUpTransaction} 
-                            disabled={cart.length===0} 
-                            className="bg-white border-2 border-slate-200 hover:border-indigo-500 hover:text-indigo-600 text-slate-700 rounded-xl font-bold flex flex-col items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden"
-                        >
-                            <div className="absolute top-2 right-2"><Wifi size={14} className="text-slate-300"/></div>
-                            <CreditCard size={28} /> SUMUP AIR
-                        </button>
+                        
+                        {/* SumUp Button - Conditional */}
+                        {settings.integrations.sumUpEnabled ? (
+                            <button 
+                                onClick={() => processSale('SUMUP')} 
+                                disabled={cart.length===0 || isProcessingPayment} 
+                                className="bg-white border-2 border-slate-200 hover:border-indigo-500 hover:text-indigo-600 text-slate-700 rounded-xl font-bold flex flex-col items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden"
+                            >
+                                <div className="absolute top-2 right-2"><Wifi size={14} className="text-slate-300"/></div>
+                                <CreditCard size={28} /> SUMUP AIR
+                            </button>
+                        ) : (
+                             // If SumUp disabled, show a placeholder or disabled generic card button (optional) or nothing (grid-span handled above)
+                             null
+                        )}
                     </div>
                 </div>
             </div>
@@ -283,60 +315,26 @@ const Sales: React.FC<SalesProps> = ({ products, setProducts, sales, setSales })
                         <button onClick={() => setIsScannerMode(false)} className="bg-white/20 p-2 rounded-full"><X /></button>
                     </div>
                     <div className="flex-1 flex flex-col items-center justify-center p-8 relative">
-                        {/* Simulation of Camera Viewfinder */}
-                        <div className="w-full max-w-sm aspect-[3/4] border-2 border-white/30 rounded-3xl relative overflow-hidden bg-slate-800 flex flex-col items-center justify-center">
+                         {/* Viewfinder logic remains same */}
+                         <div className="w-full max-w-sm aspect-[3/4] border-2 border-white/30 rounded-3xl relative overflow-hidden bg-slate-800 flex flex-col items-center justify-center">
                              <div className="absolute inset-0 border-[40px] border-black/50 pointer-events-none"></div>
                              <div className="w-64 h-1 bg-red-500/80 shadow-[0_0_15px_rgba(239,68,68,0.8)] animate-pulse z-10"></div>
                              <p className="text-white/50 text-sm mt-8">Inquadra il codice a barre</p>
-                             
-                             {/* Invisible input that keeps focus to capture scanner gun input */}
                              <form onSubmit={handleBarcodeScan} className="absolute inset-0 opacity-0 z-20 cursor-pointer">
-                                <input 
-                                    ref={scannerInputRef}
-                                    value={scannedCode} 
-                                    onChange={e => setScannedCode(e.target.value)} 
-                                    className="w-full h-full cursor-pointer"
-                                    autoComplete="off"
-                                />
+                                <input ref={scannerInputRef} value={scannedCode} onChange={e => setScannedCode(e.target.value)} className="w-full h-full cursor-pointer" autoComplete="off"/>
                                 <button type="submit" className="hidden"></button>
                              </form>
                         </div>
-                        <p className="text-white mt-6 font-mono text-xl">{scannedCode || 'In attesa di scansione...'}</p>
-                        <p className="text-slate-400 text-sm mt-2">Usa la fotocamera o digita il codice</p>
                     </div>
                 </div>
             )}
 
-            {/* --- MODAL: SUMUP SIMULATION --- */}
-            {sumUpState !== 'IDLE' && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
-                    <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl flex flex-col items-center p-8 text-center">
-                        <div className="w-16 h-16 mb-6 relative">
-                            {sumUpState === 'CONNECTING' && <Loader2 className="w-full h-full text-indigo-600 animate-spin" />}
-                            {sumUpState === 'WAITING_CARD' && <Wifi className="w-full h-full text-indigo-600 animate-pulse" />}
-                            {sumUpState === 'PROCESSING' && <Loader2 className="w-full h-full text-indigo-600 animate-spin" />}
-                            {sumUpState === 'SUCCESS' && <CheckCircle2 className="w-full h-full text-green-500 animate-bounce" />}
-                        </div>
-                        
-                        <h3 className="text-2xl font-bold text-slate-800 mb-2">
-                            {sumUpState === 'CONNECTING' && 'Cerco terminale SumUp...'}
-                            {sumUpState === 'WAITING_CARD' && 'Avvicina la carta'}
-                            {sumUpState === 'PROCESSING' && 'Autorizzazione in corso...'}
-                            {sumUpState === 'SUCCESS' && 'Pagamento Riuscito!'}
-                        </h3>
-                        
-                        <p className="text-slate-500 text-lg mb-8">Totale: <b>€{cartTotal.toFixed(2)}</b></p>
-                        
-                        {/* Visual representation of SumUp Solo/Air */}
-                        <div className="w-32 h-48 bg-slate-900 rounded-xl border-4 border-slate-800 flex flex-col items-center justify-center relative shadow-xl">
-                             <div className="text-white font-bold text-xs absolute top-4">SumUp</div>
-                             <div className="w-24 h-24 bg-white rounded-lg flex items-center justify-center">
-                                 {sumUpState === 'WAITING_CARD' && <div className="w-12 h-8 border-2 border-slate-300 rounded bg-indigo-100 animate-pulse"></div>}
-                                 {sumUpState === 'SUCCESS' && <CheckCircle2 className="text-green-500"/>}
-                             </div>
-                        </div>
-
-                        <button onClick={() => setSumUpState('IDLE')} className="mt-8 text-slate-400 text-sm hover:text-slate-600 underline">Annulla Transazione</button>
+            {/* --- PROCESSING OVERLAY --- */}
+            {isProcessingPayment && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                    <div className="bg-white rounded-3xl p-8 flex flex-col items-center gap-6 animate-pulse">
+                        <Loader2 className="animate-spin text-indigo-600 w-16 h-16"/>
+                        <h3 className="text-xl font-bold text-slate-800">{statusMessage}</h3>
                     </div>
                 </div>
             )}

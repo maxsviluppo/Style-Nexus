@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sale, Invoice, FinancialRecord, TransactionCategory } from '../types';
+import { Sale, Invoice, FinancialRecord, TransactionCategory, DetailedPaymentMethod } from '../types';
 import { TrendingUp, TrendingDown, PieChart, FileText, Plus, X, Calendar, Zap, Home, DollarSign, Briefcase, AlertCircle, CheckCircle } from 'lucide-react';
 
 interface AccountingProps {
@@ -15,7 +15,8 @@ const Accounting: React.FC<AccountingProps> = ({ sales, invoices, financialRecor
         type: 'OUT',
         category: 'OTHER_EXPENSE',
         date: new Date().toISOString().split('T')[0],
-        isPaid: true
+        isPaid: true,
+        paymentMethod: 'BANK_TRANSFER'
     });
 
     // --- Math ---
@@ -33,15 +34,15 @@ const Accounting: React.FC<AccountingProps> = ({ sales, invoices, financialRecor
     const allTransactions = [
         ...sales.map(s => ({ 
             id: s.id, date: s.date, type: 'IN' as const, amount: s.total, 
-            desc: `Vendita POS (${s.items.length} art.)`, ref: 'Scontrino', category: 'SALES', isPaid: true 
+            desc: `Vendita POS (${s.items.length} art.)`, ref: 'Scontrino', category: 'SALES', isPaid: true, method: s.paymentMethod 
         })),
         ...invoices.map(i => ({ 
             id: i.id, date: i.date, type: 'OUT' as const, amount: i.totalAmount, 
-            desc: `Fattura Fornitore`, ref: i.invoiceNumber, category: 'SUPPLIER', isPaid: true 
+            desc: `Fattura Fornitore`, ref: i.invoiceNumber, category: 'SUPPLIER', isPaid: true, method: 'BANK_TRANSFER' 
         })),
         ...financialRecords.map(r => ({
             id: r.id, date: r.date, type: r.type, amount: r.amount,
-            desc: r.description, ref: r.category, category: r.category, isPaid: r.isPaid
+            desc: r.description, ref: r.category, category: r.category, isPaid: r.isPaid, method: r.paymentMethod
         }))
     ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
@@ -60,15 +61,16 @@ const Accounting: React.FC<AccountingProps> = ({ sales, invoices, financialRecor
             category: newTransaction.category as TransactionCategory,
             description: newTransaction.description!,
             dueDate: newTransaction.dueDate,
-            isPaid: newTransaction.isPaid!
+            isPaid: newTransaction.isPaid!,
+            paymentMethod: newTransaction.paymentMethod as DetailedPaymentMethod
         };
         setFinancialRecords([...financialRecords, record]);
         setIsModalOpen(false);
-        setNewTransaction({ type: 'OUT', category: 'OTHER_EXPENSE', date: new Date().toISOString().split('T')[0], isPaid: true, amount: 0, description: '' });
+        setNewTransaction({ type: 'OUT', category: 'OTHER_EXPENSE', date: new Date().toISOString().split('T')[0], isPaid: true, amount: 0, description: '', paymentMethod: 'BANK_TRANSFER' });
     };
 
     const markAsPaid = (id: string) => {
-        setFinancialRecords(financialRecords.map(r => r.id === id ? { ...r, isPaid: true } : r));
+        setFinancialRecords(financialRecords.map(r => r.id === id ? { ...r, isPaid: true, paymentMethod: 'BANK_TRANSFER' } : r));
     };
 
     const getCategoryIcon = (cat: string) => {
@@ -139,7 +141,7 @@ const Accounting: React.FC<AccountingProps> = ({ sales, invoices, financialRecor
                                 <tr>
                                     <th className="p-4">Data</th>
                                     <th className="p-4">Descrizione</th>
-                                    <th className="p-4">Cat.</th>
+                                    <th className="p-4">Metodo</th>
                                     <th className="p-4 text-right">Importo</th>
                                     <th className="p-4">Stato</th>
                                 </tr>
@@ -152,12 +154,11 @@ const Accounting: React.FC<AccountingProps> = ({ sales, invoices, financialRecor
                                         <td className="p-4 font-medium text-slate-800">
                                             {t.desc}
                                             {t.ref && <div className="text-xs text-slate-400 font-mono">{t.ref}</div>}
-                                        </td>
-                                        <td className="p-4">
-                                            <span className="flex items-center gap-1 text-xs font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded w-fit">
+                                            <div className="flex items-center gap-1 text-[10px] font-bold text-slate-500 mt-1">
                                                 {getCategoryIcon(t.category)} {t.category}
-                                            </span>
+                                            </div>
                                         </td>
+                                        <td className="p-4 text-xs text-slate-500 uppercase">{t.method || '-'}</td>
                                         <td className={`p-4 text-right font-bold ${t.type === 'IN' ? 'text-emerald-600' : 'text-rose-600'}`}>
                                             {t.type === 'IN' ? '+' : '-'}€{t.amount.toFixed(2)}
                                         </td>
@@ -258,10 +259,23 @@ const Accounting: React.FC<AccountingProps> = ({ sales, invoices, financialRecor
                                 <label htmlFor="paid" className="text-sm font-medium text-slate-700">Già Pagato?</label>
                             </div>
 
-                            {!newTransaction.isPaid && (
+                            {!newTransaction.isPaid ? (
                                 <div>
                                     <label className="text-xs font-bold text-slate-500 text-amber-600">Data Scadenza Pagamento</label>
                                     <input type="date" className="w-full p-2 border rounded mt-1 border-amber-200 bg-amber-50" value={newTransaction.dueDate || ''} onChange={e => setNewTransaction({...newTransaction, dueDate: e.target.value})} />
+                                </div>
+                            ) : (
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 text-green-600">Metodo di Pagamento</label>
+                                    <select className="w-full p-2 border rounded mt-1 bg-green-50 border-green-200" value={newTransaction.paymentMethod} onChange={e => setNewTransaction({...newTransaction, paymentMethod: e.target.value as any})}>
+                                        <option value="BANK_TRANSFER">Bonifico Bancario</option>
+                                        <option value="CREDIT_CARD">Carta di Credito</option>
+                                        <option value="DEBIT_CARD">Bancomat / Debito</option>
+                                        <option value="CASH">Contanti</option>
+                                        <option value="PAYPAL">PayPal / Satispay</option>
+                                        <option value="CHECK">Assegno</option>
+                                        <option value="RIBA">Ri.Ba.</option>
+                                    </select>
                                 </div>
                             )}
 

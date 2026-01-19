@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { StoreSettings } from '../types';
 import { 
     Settings, Save, FileText, Briefcase, 
-    Upload
+    Upload, Printer, Wifi
 } from 'lucide-react';
 
 interface AdminProps {
@@ -15,7 +15,7 @@ const Admin: React.FC<AdminProps> = ({ settings, setSettings }) => {
 
     const handleSave = () => {
         setSettings(localSettings);
-        alert("Impostazioni salvate!");
+        alert("Impostazioni salvate con successo!");
     };
 
     const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -33,7 +33,7 @@ const Admin: React.FC<AdminProps> = ({ settings, setSettings }) => {
                     <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
                         <Settings className="text-slate-800" /> Impostazioni Azienda
                     </h2>
-                    <p className="text-slate-500">Gestione profilo, logo e dati fiscali.</p>
+                    <p className="text-slate-500">Gestione profilo, dati fiscali e hardware POS.</p>
                 </div>
             </div>
 
@@ -66,33 +66,78 @@ const Admin: React.FC<AdminProps> = ({ settings, setSettings }) => {
                     </div>
                 </div>
 
-                {/* Center: Fiscal Data */}
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 lg:col-span-2">
-                        <h4 className="font-bold text-slate-700 mb-6 flex items-center gap-2 border-b pb-2"><FileText size={18}/> Dati Fiscali & Fatturazione</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="md:col-span-2"><label className="text-xs font-bold text-slate-500">Ragione Sociale Completa</label><input type="text" value={localSettings.companyName} onChange={e=>setLocalSettings({...localSettings, companyName: e.target.value})} className="w-full p-2 border rounded"/></div>
-                            <div><label className="text-xs font-bold text-slate-500">Partita IVA</label><input type="text" value={localSettings.vatNumber} onChange={e=>setLocalSettings({...localSettings, vatNumber: e.target.value})} className="w-full p-2 border rounded font-mono"/></div>
-                            <div><label className="text-xs font-bold text-slate-500">Codice Fiscale</label><input type="text" value={localSettings.fiscalCode} onChange={e=>setLocalSettings({...localSettings, fiscalCode: e.target.value})} className="w-full p-2 border rounded font-mono"/></div>
-                            <div><label className="text-xs font-bold text-slate-500">Codice Univoco (SDI)</label><input type="text" value={localSettings.sdiCode || ''} onChange={e=>setLocalSettings({...localSettings, sdiCode: e.target.value})} className="w-full p-2 border rounded"/></div>
-                            <div><label className="text-xs font-bold text-slate-500">PEC</label><input type="email" value={localSettings.pec || ''} onChange={e=>setLocalSettings({...localSettings, pec: e.target.value})} className="w-full p-2 border rounded"/></div>
-                            <div className="md:col-span-2"><label className="text-xs font-bold text-slate-500">Sede Legale (Via, Civico)</label><input type="text" value={localSettings.address} onChange={e=>setLocalSettings({...localSettings, address: e.target.value})} className="w-full p-2 border rounded"/></div>
-                            <div><label className="text-xs font-bold text-slate-500">Città</label><input type="text" value={localSettings.city} onChange={e=>setLocalSettings({...localSettings, city: e.target.value})} className="w-full p-2 border rounded"/></div>
-                            <div><label className="text-xs font-bold text-slate-500">CAP</label><input type="text" value={localSettings.zip} onChange={e=>setLocalSettings({...localSettings, zip: e.target.value})} className="w-full p-2 border rounded"/></div>
-                        </div>
+                {/* Center: Fiscal Data & Hardware */}
+                <div className="lg:col-span-2 space-y-6">
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+                            <h4 className="font-bold text-slate-700 mb-6 flex items-center gap-2 border-b pb-2"><FileText size={18}/> Dati Fiscali & Fatturazione</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="md:col-span-2"><label className="text-xs font-bold text-slate-500">Ragione Sociale Completa</label><input type="text" value={localSettings.companyName} onChange={e=>setLocalSettings({...localSettings, companyName: e.target.value})} className="w-full p-2 border rounded"/></div>
+                                <div><label className="text-xs font-bold text-slate-500">Partita IVA</label><input type="text" value={localSettings.vatNumber} onChange={e=>setLocalSettings({...localSettings, vatNumber: e.target.value})} className="w-full p-2 border rounded font-mono"/></div>
+                                <div><label className="text-xs font-bold text-slate-500">Codice Fiscale</label><input type="text" value={localSettings.fiscalCode} onChange={e=>setLocalSettings({...localSettings, fiscalCode: e.target.value})} className="w-full p-2 border rounded font-mono"/></div>
+                                <div><label className="text-xs font-bold text-slate-500">Codice Univoco (SDI)</label><input type="text" value={localSettings.sdiCode || ''} onChange={e=>setLocalSettings({...localSettings, sdiCode: e.target.value})} className="w-full p-2 border rounded"/></div>
+                                <div><label className="text-xs font-bold text-slate-500">PEC</label><input type="email" value={localSettings.pec || ''} onChange={e=>setLocalSettings({...localSettings, pec: e.target.value})} className="w-full p-2 border rounded"/></div>
+                                <div className="md:col-span-2"><label className="text-xs font-bold text-slate-500">Sede Legale (Via, Civico)</label><input type="text" value={localSettings.address} onChange={e=>setLocalSettings({...localSettings, address: e.target.value})} className="w-full p-2 border rounded"/></div>
+                                <div><label className="text-xs font-bold text-slate-500">Città</label><input type="text" value={localSettings.city} onChange={e=>setLocalSettings({...localSettings, city: e.target.value})} className="w-full p-2 border rounded"/></div>
+                                <div><label className="text-xs font-bold text-slate-500">CAP</label><input type="text" value={localSettings.zip} onChange={e=>setLocalSettings({...localSettings, zip: e.target.value})} className="w-full p-2 border rounded"/></div>
+                            </div>
+                    </div>
+
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+                        <h4 className="font-bold text-slate-700 mb-6 flex items-center gap-2 border-b pb-2"><Printer size={18}/> Integrazione Hardware POS (RT & Pagamenti)</h4>
                         
-                        <h4 className="font-bold text-slate-700 mt-8 mb-4 flex items-center gap-2 border-b pb-2">Contatti & Social</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div><label className="text-xs font-bold text-slate-500">Email Pubblica</label><input type="email" value={localSettings.email} onChange={e=>setLocalSettings({...localSettings, email: e.target.value})} className="w-full p-2 border rounded"/></div>
-                            <div><label className="text-xs font-bold text-slate-500">Telefono</label><input type="text" value={localSettings.phone} onChange={e=>setLocalSettings({...localSettings, phone: e.target.value})} className="w-full p-2 border rounded"/></div>
-                            <div><label className="text-xs font-bold text-slate-500">Sito Web</label><input type="text" value={localSettings.website || ''} onChange={e=>setLocalSettings({...localSettings, website: e.target.value})} className="w-full p-2 border rounded"/></div>
-                            <div><label className="text-xs font-bold text-slate-500">Instagram URL</label><input type="text" value={localSettings.instagram || ''} onChange={e=>setLocalSettings({...localSettings, instagram: e.target.value})} className="w-full p-2 border rounded"/></div>
+                        {/* SumUp Section */}
+                        <div className="mb-6 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                            <div className="flex justify-between items-center mb-4">
+                                <div className="flex items-center gap-2 font-bold text-slate-800"><Wifi size={18}/> SumUp Integration</div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs font-bold text-slate-500">{localSettings.integrations.sumUpEnabled ? 'Abilitato' : 'Disabilitato'}</span>
+                                    <button onClick={() => setLocalSettings(prev => ({...prev, integrations: {...prev.integrations, sumUpEnabled: !prev.integrations.sumUpEnabled}}))} className={`w-10 h-5 rounded-full p-1 transition-colors ${localSettings.integrations.sumUpEnabled ? 'bg-indigo-600' : 'bg-slate-300'}`}>
+                                        <div className={`w-3 h-3 bg-white rounded-full transition-transform ${localSettings.integrations.sumUpEnabled ? 'translate-x-5' : ''}`}></div>
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 opacity-100 transition-opacity" style={{opacity: localSettings.integrations.sumUpEnabled ? 1 : 0.5}}>
+                                <div className="col-span-2">
+                                    <label className="text-xs font-bold text-slate-500">Email Account SumUp</label>
+                                    <input type="email" disabled={!localSettings.integrations.sumUpEnabled} value={localSettings.integrations.sumUpEmail} onChange={e => setLocalSettings({...localSettings, integrations: {...localSettings.integrations, sumUpEmail: e.target.value}})} className="w-full p-2 border rounded mt-1" placeholder="merchant@email.com"/>
+                                </div>
+                            </div>
                         </div>
 
-                        <div className="mt-8 flex justify-end">
-                            <button onClick={handleSave} className="bg-indigo-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-indigo-700 flex items-center gap-2 shadow-lg shadow-indigo-200">
-                                <Save size={20}/> Salva Modifiche
-                            </button>
+                        {/* Fiscal Printer Section */}
+                        <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                            <div className="flex justify-between items-center mb-4">
+                                <div className="flex items-center gap-2 font-bold text-slate-800"><Printer size={18}/> Registratore Telematico (RT)</div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs font-bold text-slate-500">{localSettings.integrations.printerEnabled ? 'Abilitato' : 'Disabilitato'}</span>
+                                    <button onClick={() => setLocalSettings(prev => ({...prev, integrations: {...prev.integrations, printerEnabled: !prev.integrations.printerEnabled}}))} className={`w-10 h-5 rounded-full p-1 transition-colors ${localSettings.integrations.printerEnabled ? 'bg-indigo-600' : 'bg-slate-300'}`}>
+                                        <div className={`w-3 h-3 bg-white rounded-full transition-transform ${localSettings.integrations.printerEnabled ? 'translate-x-5' : ''}`}></div>
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4" style={{opacity: localSettings.integrations.printerEnabled ? 1 : 0.5}}>
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500">Marca RT</label>
+                                    <select disabled={!localSettings.integrations.printerEnabled} value={localSettings.integrations.printerBrand} onChange={e => setLocalSettings({...localSettings, integrations: {...localSettings.integrations, printerBrand: e.target.value as any}})} className="w-full p-2 border rounded mt-1 bg-white">
+                                        <option value="NONE">Seleziona...</option>
+                                        <option value="EPSON">Epson (ePOS XML)</option>
+                                        <option value="CUSTOM">Custom (XML)</option>
+                                        <option value="RCH">RCH (PrintF)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500">Indirizzo IP Stampante</label>
+                                    <input type="text" disabled={!localSettings.integrations.printerEnabled} value={localSettings.integrations.printerIp} onChange={e => setLocalSettings({...localSettings, integrations: {...localSettings.integrations, printerIp: e.target.value}})} className="w-full p-2 border rounded mt-1 font-mono" placeholder="192.168.1.xxx"/>
+                                </div>
+                            </div>
                         </div>
+                    </div>
+
+                    <div className="flex justify-end pt-4">
+                        <button onClick={handleSave} className="bg-indigo-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-indigo-700 flex items-center gap-2 shadow-lg shadow-indigo-200">
+                            <Save size={20}/> Salva Configurazioni
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

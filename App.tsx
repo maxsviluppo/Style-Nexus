@@ -64,11 +64,18 @@ const initialSettings: StoreSettings = {
     email: 'amministrazione@stylenexus.it',
     phone: '+39 02 1234567',
     vatRate: 22,
-    currency: '€'
+    currency: '€',
+    integrations: {
+      printerIp: '192.168.1.100',
+      printerBrand: 'NONE',
+      printerEnabled: false,
+      sumUpEmail: '',
+      sumUpEnabled: false
+    }
 };
 
 const initialFinancialRecords: FinancialRecord[] = [
-  { id: 'f1', date: new Date().toISOString().split('T')[0], amount: 1200, type: 'OUT', category: 'RENT', description: 'Affitto Negozio Mensile', isPaid: true },
+  { id: 'f1', date: new Date().toISOString().split('T')[0], amount: 1200, type: 'OUT', category: 'RENT', description: 'Affitto Negozio Mensile', isPaid: true, paymentMethod: 'BANK_TRANSFER' },
   { id: 'f2', date: new Date(Date.now() + 86400000 * 5).toISOString().split('T')[0], amount: 450, type: 'OUT', category: 'UTILITIES', description: 'Bolletta Luce', dueDate: new Date(Date.now() + 86400000 * 5).toISOString().split('T')[0], isPaid: false },
 ];
 
@@ -98,7 +105,7 @@ const App: React.FC = () => {
       case View.STOREFRONT:
         return <Storefront products={products} />;
       case View.SALES:
-        return <Sales products={products} setProducts={setProducts} sales={sales} setSales={setSales} />;
+        return <Sales products={products} setProducts={setProducts} sales={sales} setSales={setSales} settings={settings} />;
       case View.ACCOUNTING:
         return <Accounting sales={sales} invoices={invoices} financialRecords={financialRecords} setFinancialRecords={setFinancialRecords} />;
       case View.CFO:
@@ -139,7 +146,7 @@ const App: React.FC = () => {
           <h1 className="text-xl font-bold text-slate-800 leading-tight">
             {settings.storeName}
           </h1>
-          <p className="text-xs text-slate-400 mt-1">Retail Management v2.4</p>
+          <p className="text-xs text-slate-400 mt-1">Retail Management v2.5</p>
         </div>
         
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
