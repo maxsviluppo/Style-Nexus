@@ -87,8 +87,8 @@ const initialSettings: StoreSettings = {
 };
 
 const initialFinancialRecords: FinancialRecord[] = [
-  { id: 'f1', date: new Date().toISOString().split('T')[0], amount: 1200, type: 'OUT', category: 'RENT', description: 'Affitto Negozio Mensile', isPaid: true, paymentMethod: 'BANK_TRANSFER' },
-  { id: 'f2', date: new Date(Date.now() + 86400000 * 5).toISOString().split('T')[0], amount: 450, type: 'OUT', category: 'UTILITIES', description: 'Bolletta Luce', dueDate: new Date(Date.now() + 86400000 * 5).toISOString().split('T')[0], isPaid: false },
+  { id: 'f1', date: new Date().toISOString().split('T')[0], amount: 1200, type: 'OUT', category: 'RENT', description: 'Affitto Negozio Mensile', isPaid: true, paymentMethod: 'BANK_TRANSFER', isEditable: true },
+  { id: 'f2', date: new Date(Date.now() + 86400000 * 5).toISOString().split('T')[0], amount: 450, type: 'OUT', category: 'UTILITIES', description: 'Bolletta Luce', dueDate: new Date(Date.now() + 86400000 * 5).toISOString().split('T')[0], isPaid: false, isEditable: true },
 ];
 
 const App: React.FC = () => {
@@ -109,7 +109,7 @@ const App: React.FC = () => {
       case View.PRODUCTS:
         return <Products products={products} setProducts={setProducts} settings={settings} />;
       case View.SUPPLY_CHAIN:
-        return <SupplyChain products={products} setProducts={setProducts} invoices={invoices} setInvoices={setInvoices} />;
+        return <SupplyChain products={products} setProducts={setProducts} invoices={invoices} setInvoices={setInvoices} financialRecords={financialRecords} setFinancialRecords={setFinancialRecords} />;
       case View.CATEGORIES:
         return <Categories />;
       case View.MARKETING:

@@ -68,6 +68,14 @@ export interface InvoiceItem {
   costPrice: number;
 }
 
+export interface Installment {
+  id: string;
+  dueDate: string;
+  amount: number;
+  isPaid: boolean;
+  note?: string;
+}
+
 export interface Invoice {
   id: string;
   supplierId: string;
@@ -75,7 +83,11 @@ export interface Invoice {
   date: string;
   items: InvoiceItem[];
   totalAmount: number;
-  status: 'DRAFT' | 'COMPLETED';
+  status: 'DRAFT' | 'COMPLETED'; // Stock status
+  
+  // Payment Tracking
+  paymentStatus: 'PAID' | 'PARTIAL' | 'UNPAID';
+  installments?: Installment[];
 }
 
 export interface SaleItem {
@@ -95,7 +107,7 @@ export interface Sale {
   paymentMethod: 'CASH' | 'CARD' | 'SUMUP';
 }
 
-export type TransactionCategory = 'RENT' | 'UTILITIES' | 'TAXES' | 'SALARY' | 'OTHER_EXPENSE' | 'OTHER_INCOME' | 'GRANT';
+export type TransactionCategory = 'RENT' | 'UTILITIES' | 'TAXES' | 'SALARY' | 'OTHER_EXPENSE' | 'OTHER_INCOME' | 'GRANT' | 'SUPPLIER';
 export type DetailedPaymentMethod = 'CASH' | 'CREDIT_CARD' | 'DEBIT_CARD' | 'BANK_TRANSFER' | 'PAYPAL' | 'CHECK' | 'RIBA';
 
 export interface FinancialRecord {
@@ -108,6 +120,9 @@ export interface FinancialRecord {
   dueDate?: string; // Per le scadenze
   isPaid: boolean;
   paymentMethod?: DetailedPaymentMethod; // Nuovo campo dettagliato
+  invoiceId?: string; // Link to supplier invoice
+  installmentId?: string; // Link to specific installment
+  isEditable?: boolean;
 }
 
 export interface HardwareConfig {
